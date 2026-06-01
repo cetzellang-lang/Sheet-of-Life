@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheet of Life v0.10.2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cascadia+Code:ital,wght@0,300..700;1,300..700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* ── Jet black terminal palette ── */
+  --bg:#000000;--bg2:#0d0d0d;--bg3:#1a1a1a;--bg4:#262626;
+  --text:#f8f8f2;--text2:#cfcfc2;--text3:#6c6c6c;
+  --border:rgba(248,248,242,0.1);--border2:rgba(248,248,242,0.25);
+  /* cyan = primary accent */
+  --blue:#66d9ef;--blue-l:rgba(102,217,239,0.12);--blue-d:#4ec9da;
+  /* green */
+  --green-bg:rgba(166,226,46,0.12);--green-t:#a6e22e;--green:#a6e22e;
+  /* orange */
+  --amber-bg:rgba(253,151,31,0.14);--amber-t:#fd971f;
+  /* purple */
+  --purple-bg:rgba(174,129,255,0.13);--purple-t:#ae81ff;
+  /* red/coral */
+  --coral-bg:rgba(249,38,114,0.12);--coral-t:#f92672;
+  /* pink */
+  --pink-bg:rgba(255,110,180,0.12);--pink-t:#ff6eb4;
+  /* teal = green in Monokai */
+  --teal-bg:rgba(166,226,46,0.12);--teal-t:#a6e22e;
+  /* red */
+  --red-bg:rgba(249,38,114,0.12);--red-t:#f92672;
+  /* neon yellow */
+  --yellow:#e6db74;
+  --r:2px;--rl:3px;
+  /* terminal glow helpers */
+  --glow-cyan:0 0 8px rgba(102,217,239,0.35);
+  --glow-green:0 0 8px rgba(166,226,46,0.35)
+}
+body{font-family:'Cascadia Code','Cascadia Mono','Fira Code','JetBrains Mono',monospace;background:var(--bg);color:var(--text);font-size:15px}
+.app{display:flex;flex-direction:column;height:100vh}
+.nav{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--blue);background:#000000;position:sticky;top:0;z-index:20;flex-wrap:wrap;box-shadow:0 1px 0 0 var(--blue),0 2px 12px rgba(102,217,239,0.08)}
+.nav-t{font-size:16px;font-weight:600;margin-right:auto;color:var(--green);letter-spacing:.03em}
+.nav-t::before{content:'> ';color:var(--text3);font-weight:400}
+.nav-t::after{content:'_';animation:blink 1.1s step-start infinite;color:var(--green)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.nav-ver{font-size:11px;color:var(--text3);font-weight:400;margin-left:4px}
+.tb{padding:4px 12px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s;font-family:inherit;letter-spacing:.02em}
+.tb:hover{background:var(--bg3);color:var(--text2);border-color:var(--text3)}.tb.on{background:transparent;color:var(--blue);border-color:var(--blue);box-shadow:var(--glow-cyan)}
+.main{display:flex;flex:1;overflow:hidden}
+.side{width:230px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg2);overflow-y:auto;padding:10px;transition:width .2s}
+.side.collapsed{width:36px;padding:6px;overflow:hidden}
+.side.collapsed>*:not(.side-toggle){display:none}
+.side-toggle{font-size:14px;cursor:pointer;color:var(--text2);text-align:center;padding:4px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);margin-bottom:6px;font-family:inherit}
+.side-toggle:hover{background:var(--bg3)}
+.cnt{flex:1;overflow-y:auto;padding:14px 18px}
+.cnt.cal-mode{display:flex;flex-direction:column;overflow:hidden}
+.cnt.cal-mode>.cal-scroll-top{flex-shrink:0}
+.cnt.cal-mode>.cal-wrap{flex:1;min-height:200px}
+.lbl{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.sinp{width:100%;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--text);font-size:13px;margin-bottom:6px;outline:none;font-family:inherit}
+.sinp:focus{border-color:var(--blue);box-shadow:var(--glow-cyan)}
+.fbar{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:2px 7px;border:1px solid var(--border2);border-radius:var(--r);font-size:11px;font-weight:500;cursor:pointer;background:transparent;color:var(--text3);font-family:inherit}
+.fb:hover{background:var(--bg3);color:var(--text2)}.fb.on{background:var(--purple-bg);border-color:var(--purple-t);color:var(--purple-t)}
+.tag{font-size:10px;font-weight:500;padding:1px 6px;border-radius:var(--r)}
+.rc{padding:7px 9px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);margin-bottom:4px;cursor:pointer;transition:border-color .12s}
+.rc:hover{border-color:var(--text3)}.rc.on{border:1px solid var(--blue);background:var(--blue-l);box-shadow:var(--glow-cyan)}
+.rcn{font-size:12px;font-weight:500;line-height:1.4}
+.rct{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+
+/* Goals */
+.goals-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.goal-card{flex:1;min-width:140px;padding:10px 14px;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:var(--r);background:var(--bg2)}
+.goal-label{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.05em}
+.goal-val{font-size:22px;font-weight:600;margin-top:3px;color:var(--text)}
+.goal-bar{height:3px;background:var(--bg4);border-radius:0;margin-top:8px;overflow:hidden}
+.goal-fill{height:100%;border-radius:0;transition:width .3s}
+
+/* Timeframe */
+.tf-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--blue);border-radius:var(--r);flex-wrap:wrap}
+.tf-label{font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap}
+.tf-inp{padding:3px 7px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--text);font-size:12px;outline:none;width:120px;font-family:inherit}
+.tf-stats{font-size:12px;color:var(--text2);margin-left:auto}.tf-hl{color:var(--blue);font-weight:600}
+
+/* Calendar */
+.cal-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cal-mo{font-size:17px;font-weight:600;flex:1;color:var(--yellow);letter-spacing:.02em}
+.arr{padding:3px 10px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:14px;font-family:inherit}
+.arr:hover{color:var(--blue);border-color:var(--blue)}
+.arr:disabled{opacity:.25;cursor:default}
+.cal-wrap{display:flex;flex-direction:column;flex:1;min-height:0}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cgrid.flex-fill{grid-template-rows:auto repeat(var(--weeks,6),1fr);flex:1;min-height:0}
+.dow{font-size:10px;font-weight:600;color:var(--blue);text-align:center;padding:4px 0;text-transform:uppercase;letter-spacing:.08em}
+.day{min-height:90px;border:1px solid var(--border);border-radius:var(--r);padding:4px;cursor:pointer;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;transition:border-color .1s,background .1s}
+.day:hover:not(.om){background:var(--bg3);border-color:var(--border2)}
+.day.om{opacity:.25;cursor:default;pointer-events:none}
+.day.pd{background:var(--bg2)}
+.day.pd:hover{background:var(--bg3)}
+.day.td{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue),var(--glow-cyan)}.day.hm{background:var(--blue-l)}
+.day.in-tf{border-left:2px solid rgba(102,217,239,0.3)}
+.dn{font-size:11px;color:var(--text3);font-weight:600;margin-bottom:2px;flex-shrink:0;font-variant-numeric:tabular-nums}.td .dn{color:var(--blue);font-weight:700;text-shadow:0 0 6px rgba(102,217,239,0.6)}
+.pd .dn{color:var(--text3);opacity:.6}
+.day-content{flex:1;min-height:0;overflow:hidden}
+/* Meal slot labels */
+.slot-lbl{font-size:7px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.mc{font-size:9px;padding:2px 5px;border-radius:var(--r);margin-bottom:2px;display:flex;align-items:center;gap:2px;line-height:1.3;cursor:pointer;overflow:hidden}
+.mc.cook{background:rgba(102,217,239,0.18);color:var(--blue);border-left:2px solid var(--blue)}.mc.cook:hover{background:rgba(102,217,239,0.28)}
+.mc.leftover{background:var(--bg4);color:var(--text3);font-style:italic;border-left:2px solid var(--text3)}
+.mc.quick{background:var(--amber-bg);color:var(--amber-t);border-left:2px solid var(--amber-t)}
+.mc.eatout{background:var(--coral-bg);color:var(--coral-t);border-left:2px solid var(--coral-t)}
+.mc.recurring{background:var(--pink-bg);color:var(--pink-t);border-left:2px solid var(--pink-t)}
+.mc.run{background:var(--teal-bg);color:var(--teal-t);border-left:2px solid var(--teal-t)}
+.mc.run-actual{background:rgba(166,226,46,0.22);color:var(--green);border-left:2px solid var(--green)}
+.mc.run-ghost{background:transparent;color:var(--text3);border:1px dashed var(--border2);font-style:italic}
+.mc.learn{background:var(--purple-bg);color:var(--purple-t);border-left:2px solid var(--purple-t)}
+.mc.event{background:var(--bg3);color:var(--text2);border-left:2px solid var(--text3)}
+.mc.chore{background:rgba(230,219,116,0.08);color:var(--yellow);border-left:2px solid var(--yellow)}
+.mx{font-size:8px;opacity:.7;flex-shrink:0}
+.da{font-size:9px;color:var(--blue);margin-top:1px;letter-spacing:.02em}
+/* View toggle (Month / 2-Week) */
+.vt-grp{display:flex;gap:2px;margin-left:auto}
+.vt-btn{padding:2px 9px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text3);cursor:pointer;font-size:10px;font-family:inherit;letter-spacing:.04em;transition:all .12s}
+.vt-btn.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue);box-shadow:var(--glow-cyan)}
+.vt-btn:hover:not(.on){color:var(--text2);border-color:var(--border2)}
+
+/* Suggestions */
+.sbox{border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;background:var(--bg2)}
+.sbox-hd{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.sbox-sub{font-size:11px;color:var(--text3);margin-bottom:8px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.si{border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;cursor:pointer;transition:all .12s;background:var(--bg3)}
+.si:hover{border-color:var(--blue);background:var(--blue-l);box-shadow:var(--glow-cyan)}
+.si-name{font-size:12px;font-weight:500;line-height:1.4}
+.si-meta{font-size:10px;color:var(--text2);margin-top:2px;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.pill{font-size:10px;font-weight:600;padding:1px 6px;border-radius:var(--r)}
+.pill-g{background:var(--green-bg);color:var(--green-t)}
+.pill-a{background:var(--amber-bg);color:var(--amber-t)}
+
+.banner{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--text3);border-radius:var(--r);padding:9px 12px;font-size:12px;color:var(--text2);margin-bottom:12px}
+
+/* Shopping */
+.sh-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sh-t{font-size:17px;font-weight:600;color:var(--yellow)}
+.dbtn{padding:4px 10px;border:1px solid rgba(249,38,114,0.4);border-radius:var(--r);background:transparent;color:var(--coral-t);cursor:pointer;font-size:12px;font-weight:500;font-family:inherit}
+.dbtn:hover{background:var(--coral-bg)}
+.scat{margin-bottom:16px}
+.scat-t{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.07em;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.srow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.srow:last-child{border-bottom:none}
+.scb{width:14px;height:14px;cursor:pointer;accent-color:var(--blue);flex-shrink:0}
+.snm{font-size:13px;flex:1}.snm.done{text-decoration:line-through;color:var(--text3)}
+.sq{font-size:11px;color:var(--text2);white-space:nowrap}
+
+/* Modal */
+.ov{position:fixed;inset:0;background:rgba(30,31,28,.75);z-index:50;display:flex;align-items:center;justify-content:center}
+.mdl{background:var(--bg2);border-radius:var(--r);border:1px solid var(--blue);padding:18px 20px;width:420px;max-height:85vh;overflow-y:auto;box-shadow:0 0 32px rgba(102,217,239,0.15)}
+.mdl-t{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--yellow)}
+.mdl-sub{font-size:12px;color:var(--text2);margin-bottom:8px}
+.mr{display:flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:3px;cursor:pointer;transition:all .12s;background:var(--bg3)}
+.mr:hover{background:var(--bg4)}.mr.on{border:1px solid var(--blue);background:var(--blue-l);box-shadow:var(--glow-cyan)}
+.mrn{font-size:12px;font-weight:500;flex:1;line-height:1.4}
+.mft{display:flex;justify-content:flex-end;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.bc{padding:5px 12px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:13px;font-family:inherit}
+.ba{padding:5px 14px;border:1px solid var(--blue);border-radius:var(--r);background:transparent;color:var(--blue);cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .12s}
+.ba:hover{background:var(--blue-l);box-shadow:var(--glow-cyan)}
+.ba:disabled{opacity:.3;cursor:default}
+
+/* Slot selector in modal */
+.slot-sel{display:flex;gap:4px;margin-bottom:8px}
+.slot-btn{padding:3px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:11px;cursor:pointer;background:transparent;color:var(--text3);font-family:inherit}
+.slot-btn.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue);box-shadow:var(--glow-cyan)}
+
+/* Recipe panel */
+.rpanel{position:fixed;right:0;top:0;bottom:0;width:380px;background:var(--bg2);border-left:1px solid var(--blue);z-index:40;overflow-y:auto;padding:18px;box-shadow:-4px 0 24px rgba(102,217,239,0.1)}
+.rpanel-close{position:absolute;top:12px;right:14px;font-size:18px;cursor:pointer;color:var(--text2);background:none;border:none;font-family:inherit}
+.rpanel-name{font-size:17px;font-weight:600;margin-bottom:4px;padding-right:30px;color:var(--yellow)}
+.rpanel-meta{font-size:12px;color:var(--text2);margin-bottom:12px}
+.rpanel-macros{display:flex;gap:8px;margin-bottom:14px}
+.rpanel-macro{padding:7px 10px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--border);text-align:center;flex:1}
+.rpanel-macro-val{font-size:16px;font-weight:600;color:var(--blue)}
+.rpanel-macro-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.rpanel-section{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
+.rpanel-ing{font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.rpanel-ing:last-child{border-bottom:none}
+.rpanel-step{font-size:13px;line-height:1.6;padding:7px 0;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.rpanel-step:last-child{border-bottom:none}
+.rpanel-stepnum{font-size:11px;font-weight:700;color:var(--blue);min-width:18px;flex-shrink:0;padding-top:2px}
+.rpanel-ics{margin-top:12px;padding:7px 12px;border:1px solid var(--teal-t);border-radius:var(--r);background:var(--teal-bg);color:var(--teal-t);cursor:pointer;font-size:12px;font-weight:500;width:100%;text-align:center;font-family:inherit;transition:all .12s}
+.rpanel-ics:hover{box-shadow:var(--glow-green)}
+
+/* Pulse & running */
+.pulse{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px}
+.pulse-card{padding:12px 14px;border:1px solid var(--border);border-top:2px solid var(--blue);border-radius:var(--r);background:var(--bg2)}
+.pulse-val{font-size:24px;font-weight:600;color:var(--text)}.pulse-label{font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.run-config{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:12px;border:1px solid var(--border);border-left:3px solid var(--teal-t);border-radius:var(--r);background:var(--bg2)}
+.run-field{display:flex;flex-direction:column;gap:3px}
+.run-field label{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.04em}
+.run-field select,.run-field input{padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit}
+
+.learn-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.learn-item:last-child{border-bottom:none}
+.streak-badge{background:var(--amber-bg);color:var(--amber-t);font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--r);border:1px solid var(--amber-t)}
+
+.legend{margin-top:10px;font-size:11px;color:var(--text3);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.leg-dot{display:inline-block;width:9px;height:9px;border-radius:1px;vertical-align:middle;margin-right:3px}
+
+/* Trip visualization */
+.trip-band{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px;margin-bottom:2px;line-height:1.6}
+.trip-mid{width:100%;height:2px;margin-bottom:2px;opacity:.4}
+/* Event chip — click to view, ✕ to delete */
+.mc.event{cursor:pointer}
+.empty{text-align:center;color:var(--text2);padding:40px 16px;font-size:12px}
+.rec-days{display:flex;gap:4px;margin-bottom:8px}
+.rec-day{width:26px;height:26px;border:0.5px solid var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2)}
+.rec-day.on{background:var(--coral-bg);border-color:var(--coral-t);color:var(--coral-t)}
+
+/* Pantry toggle */
+.pantry-item{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+.pantry-item:last-child{border-bottom:none}
+.pantry-toggle{width:32px;height:18px;border-radius:9px;background:var(--bg4);cursor:pointer;position:relative;transition:background .2s;border:none}
+.pantry-toggle.on{background:var(--green)}
+.pantry-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .2s}
+.pantry-toggle.on::after{left:16px}
+
+/* v0.8 People module */
+.mc.interaction{background:var(--pink-bg);color:var(--pink-t)}
+.mc.interaction:hover{filter:brightness(0.95)}
+.mc.birthday{background:rgba(230,219,116,0.14);color:var(--yellow);font-weight:600;border-left:2px solid var(--yellow)}
+
+.ppl-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ppl-title{font-size:17px;font-weight:600;margin-right:auto;color:var(--yellow)}
+.ppl-filter-bar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.ppl-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:4px;cursor:pointer;transition:border-color .12s}
+.ppl-row:hover{border-color:var(--blue);background:var(--bg3);box-shadow:var(--glow-cyan)}
+.ppl-avatar{width:34px;height:34px;border-radius:var(--r);background:var(--bg4);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;border:1px solid var(--blue)}
+.ppl-info{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ppl-name{font-size:14px;font-weight:500}
+.ppl-meta{font-size:11px;color:var(--text2);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ppl-since{font-size:12px;color:var(--text2);white-space:nowrap;text-align:right}
+.ppl-since.due{color:var(--amber-t);font-weight:500}
+.ppl-since.overdue{color:var(--coral-t);font-weight:600}
+.ppl-since.on-track{color:var(--green-t)}
+.tier-badge{font-size:10px;font-weight:600;padding:1px 7px;border-radius:var(--r);white-space:nowrap}
+.tier-family{background:var(--coral-bg);color:var(--coral-t)}
+.tier-close{background:var(--pink-bg);color:var(--pink-t)}
+.tier-friend{background:var(--teal-bg);color:var(--teal-t)}
+.tier-pro{background:var(--blue-l);color:var(--blue)}
+.tier-acq{background:var(--bg3);color:var(--text2)}
+
+.ppl-empty{text-align:center;padding:40px 16px;color:var(--text2);font-size:12px}
+.ppl-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.ppl-detail-avatar{width:56px;height:56px;border-radius:var(--r);background:var(--bg4);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0;border:1px solid var(--blue)}
+.ppl-detail-name{font-size:21px;font-weight:600;color:var(--yellow)}
+.ppl-detail-sub{font-size:12px;color:var(--text2);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ppl-detail-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px}
+.ppl-stat{padding:9px 12px;border:1px solid var(--border);border-top:2px solid var(--purple-t);border-radius:var(--r);background:var(--bg2)}
+.ppl-stat-val{font-size:20px;font-weight:600;color:var(--text)}
+.ppl-stat-label{font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.ix-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:13px}
+.ix-row:last-child{border-bottom:none}
+.ix-date{font-size:11px;color:var(--text3);min-width:55px}
+.ix-type{font-size:10px;padding:1px 7px;border-radius:var(--r);background:var(--bg4);color:var(--text2);min-width:50px;text-align:center}
+.ix-notes{flex:1;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ix-rm{cursor:pointer;color:var(--text3);font-size:11px;padding:0 4px}
+.ix-rm:hover{color:var(--coral-t)}
+
+/* Edit person form */
+.pf-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.pf-label{font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:600;letter-spacing:.04em;min-width:80px}
+.pf-row .sinp{margin:0;flex:1}
+
+/* Multi-select person chips */
+.ms-chips{display:flex;flex-wrap:wrap;gap:4px;padding:4px 6px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg);min-height:30px;align-items:center;margin-bottom:6px}
+.ms-chip{background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:20px;font-size:11px;display:inline-flex;align-items:center;gap:4px}
+.ms-chip-x{cursor:pointer;font-weight:bold}
+.ms-pick{max-height:160px;overflow-y:auto;border:0.5px solid var(--border);border-radius:var(--r);background:var(--bg);margin-bottom:6px}
+.ms-pick-item{padding:5px 10px;cursor:pointer;font-size:12px;border-bottom:0.5px solid var(--border)}
+.ms-pick-item:last-child{border-bottom:none}
+.ms-pick-item:hover{background:var(--bg2)}
+.ms-pick-item.sel{background:var(--blue-l);color:var(--blue)}
+
+/* Analytics */
+.an-section{margin-bottom:20px}
+.an-hdr{font-size:12px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.an-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.an-row-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.an-bar-wrap{flex:2;height:6px;background:var(--bg4);border-radius:0;overflow:hidden;position:relative}
+.an-bar{height:100%;border-radius:0;transition:width .3s}
+.an-row-val{font-size:12px;color:var(--text2);min-width:40px;text-align:right;font-weight:600}
+.an-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:4px}
+.an-cell{aspect-ratio:1;border-radius:1px;background:var(--bg4);position:relative}
+.an-cell.l1{background:rgba(166,226,46,.2)}
+.an-cell.l2{background:rgba(166,226,46,.45)}
+.an-cell.l3{background:rgba(166,226,46,.7)}
+.an-cell.l4{background:var(--green)}
+.an-dow{font-size:8px;text-align:center;color:var(--text3);text-transform:uppercase}
+.an-spark{display:flex;align-items:flex-end;gap:1px;height:44px;padding:2px 0}
+.an-spark-bar{flex:1;background:var(--blue);border-radius:1px 1px 0 0;min-height:1px;transition:height .3s}
+.an-spark-bar.miss{background:var(--bg4)}
+
+/* Day Edit Modal */
+.mdl.mdl-day{width:480px}
+.de-section{margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--border)}
+.de-section:last-of-type{border-bottom:none}
+.de-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.de-section-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.de-add-btn{font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer}
+.de-add-btn:hover{background:var(--bg2);color:var(--text)}
+.de-item{display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;background:var(--bg2);border-radius:var(--r);margin-bottom:3px}
+.de-item-slot{font-size:8px;text-transform:uppercase;color:var(--text3);font-weight:600;min-width:16px}
+.de-item-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.de-item-meta{font-size:10px;color:var(--text2)}
+.de-item-rm{cursor:pointer;color:var(--text3);font-size:11px;padding:0 4px}
+.de-item-rm:hover{color:#A32D2D}
+.de-empty{font-size:11px;color:var(--text3);font-style:italic;padding:4px 0}
+
+/* Learning recent log with edit */
+.ll-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:12px;cursor:pointer}
+.ll-row:hover{background:var(--bg2)}
+.ll-date{font-size:10px;color:var(--text3);min-width:55px}
+.ll-topics{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ll-hrs{font-size:10px;color:var(--text2);min-width:32px;text-align:right}
+.ll-exp{font-size:10px;color:var(--text3);padding:0 4px}
+.ll-detail{padding:6px 8px;background:var(--bg2);border-radius:var(--r);margin:3px 0 6px;font-size:11px}
+.ll-detail-row{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--border)}
+.ll-detail-row:last-child{border-bottom:none}
+.ll-detail-topic{flex:1;font-weight:500}
+.ll-detail-notes{flex:2;color:var(--text2);font-style:italic;font-size:10px}
+.ll-detail-hrs{font-size:10px;color:var(--text2);min-width:32px;text-align:right}
+.ll-detail-rm{cursor:pointer;color:var(--text3);font-size:10px;padding:0 3px}
+.ll-detail-rm:hover{color:#A32D2D}
+
+/* Topic chip for pulse analytics */
+.topic-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:20px;font-size:10px;color:var(--text2);margin:2px}
+
+/* Dropdown with + add */
+.topic-select-wrap{display:flex;gap:4px;flex:2;min-width:120px}
+.topic-select-wrap select{flex:1;padding:5px 9px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-size:12px;outline:none}
+.topic-select-wrap select:focus{border-color:var(--blue)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ═══════════════════════════════════════
+// RECIPE DATA
+// ═══════════════════════════════════════
+const R=[
+  {id:"steak-queso-rice-skillet",name:"Steak & White Queso Rice Skillet",srv:4,cu:["Tex-Mex"],cal:720,pro:48,carb:52,fat:28,ing:[{i:"long grain white rice",q:1,u:"cup"},{i:"olive oil",q:1,u:"tbsp"},{i:"onion",q:1,u:"small"},{i:"minced garlic",q:1,u:"tbsp"},{i:"chicken broth",q:2,u:"cups"},{i:"tomato sauce",q:8,u:"oz"},{i:"salt",q:0.5,u:"tsp"},{i:"pepper",q:0.5,u:"tsp"},{i:"cumin",q:1,u:"tsp"},{i:"dried cilantro",q:1,u:"tsp"},{i:"NY strip steak",q:1.5,u:"lbs"},{i:"butter",q:2,u:"tbsp"},{i:"Montreal steak seasoning",q:null,u:"to taste"},{i:"white queso",q:null,u:"to taste"},{i:"fresh cilantro",q:null,u:"to taste"},{i:"flour tortillas",q:null,u:"as needed"}],inst:["Rinse 1 cup long grain white rice. Add to a skillet over medium-high heat with 1 tbsp olive oil and stir to toast lightly.","Add 1 small chopped onion and 1 tbsp minced garlic. Stir well.","Add 2 cups chicken broth, 8 oz tomato sauce, 0.5 tsp salt, 0.5 tsp pepper, 1 tsp cumin, and 1 tsp dried cilantro. Stir and bring to a bubble.","Once bubbling, cover, reduce heat to medium-low, and cook ~20 minutes until rice is tender.","In a separate skillet over medium-high heat, melt 2 tbsp butter. Add 1.5 lbs cubed NY strip steak and season with Montreal steak seasoning to taste. Cook to desired doneness.","Top the cooked rice with steak, pour white queso over to taste, and garnish with fresh cilantro. Serve as-is or in flour tortillas."]},
+  {id:"garlic-parmesan-chicken-wraps",name:"Garlic Parmesan Chicken Wraps",srv:10,cu:["Italian"],cal:423,pro:41,carb:25,fat:18,ing:[{i:"boneless skinless chicken thighs",q:1.3,u:"lbs"},{i:"chicken breast",q:1.3,u:"lbs"},{i:"salt",q:2.5,u:"tsp"},{i:"chilli flakes",q:2,u:"tsp"},{i:"parsley",q:3,u:"tsp"},{i:"Italian herbs",q:6,u:"tsp"},{i:"paprika",q:4,u:"tsp"},{i:"garlic powder",q:4,u:"tsp"},{i:"grated parmesan",q:13.5,u:"oz"},{i:"olive oil",q:6,u:"tsp"},{i:"avocado cooking spray",q:null,u:"to taste"},{i:"light evaporated milk",q:12,u:"oz"},{i:"light butter",q:0.5,u:"oz"},{i:"low carb wraps",q:10,u:"whole"},{i:"shredded lettuce",q:null,u:"to taste"},{i:"tomato",q:null,u:"to taste"},{i:"onion",q:null,u:"to taste"}],inst:["Slice 1.3 lbs chicken breast and 1.3 lbs chicken thighs into cubes. Add 2.5 tsp salt, 2 tsp chilli flakes, 3 tsp parsley, 6 tsp Italian herbs, 4 tsp paprika, 4 tsp garlic powder, and ~10 oz of the 13.5 oz grated parmesan (reserve the rest). Drizzle with 6 tsp olive oil and mix until well coated.","In a pan over low heat, melt 0.5 oz light butter with 1 tsp Italian herbs, 1 tsp garlic powder, and 1 tsp paprika (small portion for the sauce). Toast for 1 minute.","Add 12 oz light evaporated milk and the reserved ~3.5 oz grated parmesan to the sauce pan. Stir until smooth and creamy.","Line a sheet pan with parchment paper. Spread marinated chicken evenly without overcrowding. Spray lightly with avocado cooking spray.","Bake in a preheated oven at 390°F for 20-22 minutes until crispy.","While chicken is still hot, toss with a sprinkle of reserved parmesan and fresh parsley until well coated.","Assemble 10 low carb wraps with shredded lettuce, chopped onion, chopped tomato, crispy chicken, and creamy garlic parmesan sauce.","Storage: keep chicken and sauce in separate containers in the fridge. Reheat chicken in oven or air fryer at 355°F for 4-5 minutes. Warm sauce in a pan before serving."]},
+  {id:"korean-popcorn-chicken",name:"Korean Popcorn Chicken",srv:4,cu:["Korean"],cal:580,pro:42,carb:58,fat:14,ing:[{i:"chicken breast",q:2,u:"lbs"},{i:"eggs",q:2,u:"whole"},{i:"soy sauce",q:3,u:"tbsp"},{i:"salt",q:0.75,u:"tsp"},{i:"black pepper",q:0.75,u:"tsp"},{i:"garlic powder",q:1.5,u:"tsp"},{i:"ginger powder",q:1,u:"tsp"},{i:"cornstarch",q:1,u:"cup"},{i:"flour",q:3,u:"tbsp"},{i:"baking powder",q:0.75,u:"tsp"},{i:"gochujang",q:0.33,u:"cup"},{i:"brown sugar",q:3,u:"tbsp"},{i:"ketchup",q:3,u:"tbsp"},{i:"honey",q:4,u:"tbsp"},{i:"garlic",q:3,u:"cloves"},{i:"rice vinegar",q:3,u:"tbsp"},{i:"sesame oil",q:1.5,u:"tbsp"},{i:"butter",q:1,u:"tbsp"},{i:"green onions",q:null,u:"to taste"},{i:"sesame seeds",q:null,u:"to taste"}],inst:["In a large bowl, combine 2 lbs cubed chicken breast, 2 eggs, 1.5 tbsp soy sauce (from 3 tbsp total), 0.75 tsp salt, 0.75 tsp black pepper, 1.5 tsp garlic powder, and 1 tsp ginger powder. Mix until fully coated.","Add 1 cup cornstarch, 3 tbsp flour, and 0.75 tsp baking powder. Toss until evenly coated.","Air fryer: Preheat to 400°F. Cook 8 minutes, flip, then cook another 4 minutes until crispy. Oven: Bake at 425°F for 15-20 minutes, flipping halfway.","In a pan over medium heat, combine 0.33 cup gochujang, 3 tbsp brown sugar, 3 tbsp ketchup, 4 tbsp honey, 3 cloves minced garlic, remaining 1.5 tbsp soy sauce, 3 tbsp rice vinegar, and 1.5 tbsp sesame oil. Simmer 3-4 minutes until thick, then turn off heat and whisk in 1 tbsp butter.","Add crispy chicken to a bowl and pour in ~½ cup sauce. Toss until fully coated, adding more sauce as needed.","Serve over rice topped with green onions and sesame seeds to taste."]},
+  {id:"one-pot-pesto-chicken-rice",name:"One Pot Pesto Chicken Rice",srv:3,cu:["Italian"],cal:564,pro:33,carb:72,fat:15,ing:[{i:"onion",q:1,u:"whole"},{i:"chicken breast",q:10.5,u:"oz"},{i:"sundried tomatoes",q:2.75,u:"oz"},{i:"garlic",q:2,u:"tsp"},{i:"Italian herbs",q:2,u:"tsp"},{i:"salt",q:null,u:"to taste"},{i:"pepper",q:null,u:"to taste"},{i:"reduced fat red pesto",q:0.75,u:"oz"},{i:"chicken stock",q:1.75,u:"cups"},{i:"long grain white rice",q:1.25,u:"cups"},{i:"heavy cream",q:0.33,u:"cup"},{i:"fresh basil",q:null,u:"to taste"}],inst:["Fry 10.5 oz chicken breast, 1 chopped onion, and 2.75 oz sundried tomatoes in a pan until softened and cooked through.","Add 2 tsp garlic and 2 tsp Italian herbs, plus salt and pepper to taste. Stir well.","Stir in 0.75 oz reduced fat red pesto, then add 1.75 cups chicken stock and 1.25 cups long grain white rice (uncooked).","Bring to a boil, then reduce heat, cover, and simmer for 20 minutes until liquid is absorbed and rice is cooked.","Stir in 0.33 cup heavy cream and fresh basil (to taste) just before serving."]},
+  {id:"steak-chicken-hibachi-fried-rice",name:"Steak & Chicken Hibachi Fried Rice",srv:4,cu:["Japanese"],cal:640,pro:52,carb:48,fat:22,ing:[{i:"chicken breast",q:1,u:"lb"},{i:"NY strip steak",q:1,u:"lb"},{i:"soy sauce",q:5,u:"tbsp"},{i:"oyster sauce",q:2,u:"tbsp"},{i:"sesame oil",q:2,u:"tsp"},{i:"honey",q:1,u:"tbsp"},{i:"white pepper",q:1,u:"tsp"},{i:"garlic",q:7,u:"cloves"},{i:"ginger",q:1,u:"tsp"},{i:"black pepper",q:0.5,u:"tsp"},{i:"butter",q:0.33,u:"cup"},{i:"onion",q:1.5,u:"medium"},{i:"zucchini",q:1,u:"whole"},{i:"cooked white rice",q:2,u:"cups"},{i:"eggs",q:2,u:"whole"},{i:"green onions",q:0.25,u:"cup"}],inst:["Dice 1 lb chicken breast and 1 lb NY strip steak. Split these marinade amounts across the two proteins: 5 tbsp soy sauce, 2 tbsp oyster sauce, 2 tsp sesame oil, 1 tbsp honey, 1 tsp white pepper, 0.5 tsp black pepper, ~4 cloves grated garlic (from 7 total), and 1 tsp grated ginger.","Cook both proteins on medium-high heat. Steak takes ~2-3 minutes — remove first. Once chicken reaches 160°F internal, add steak back in along with 1 tbsp garlic butter.","For garlic butter: combine 0.33 cup softened butter, remaining ~3 cloves grated garlic, and a splash of soy sauce. Mix well.","In a separate pan, sauté 1.5 medium chopped onions and 1 diced zucchini with 1 tbsp garlic butter until softened.","Add 2 cups day-old cooked white rice and let crisp for ~2 minutes.","Push rice to the side, add a little oil, and add 2 whisked eggs. Scramble, then mix into rice.","Add an additional splash of soy sauce, oyster sauce, and sesame oil. Finish with remaining garlic butter and 0.25 cup chopped green onions.","Plate fried rice with veggies and top with steak and chicken."]},
+  {id:"cheesy-taco-rice",name:"Cheesy Taco Rice",srv:4,cu:["Tex-Mex"],cal:510,pro:38,carb:62,fat:12,ing:[{i:"onion",q:1,u:"whole"},{i:"lean ground beef",q:1.1,u:"lbs"},{i:"taco seasoning",q:null,u:"to taste"},{i:"beef stock cubes",q:2,u:"whole"},{i:"jasmine rice",q:1.5,u:"cups"},{i:"tomato paste",q:2,u:"tbsp"},{i:"shredded light cheese",q:0.75,u:"cup"}],inst:["Dice 1 onion and fry in a pan until softened.","Add 1.1 lbs lean ground beef and cook through, breaking up as it cooks.","Season with taco seasoning to taste.","Dissolve 2 beef stock cubes in 3 cups boiling water and add to the pan along with 2 tbsp tomato paste. Stir well.","Add 1.5 cups dry jasmine rice, stir, bring to a boil, then reduce heat, cover, and simmer ~20 minutes until rice is cooked and liquid is absorbed.","Top with 0.75 cup shredded light cheese and serve. Optional: scoop with nacho chips or Doritos."]},
+  {id:"garlic-naan",name:"Garlic Naan",srv:7,cu:["Indian"],cal:280,pro:7,carb:38,fat:11,ing:[{i:"warm water",q:0.75,u:"cup"},{i:"sugar",q:1,u:"tsp"},{i:"yeast",q:2,u:"tsp"},{i:"bread flour",q:3,u:"cups"},{i:"olive oil",q:0.5,u:"cup"},{i:"plain yogurt",q:0.33,u:"cup"},{i:"salt",q:0.5,u:"tbsp"},{i:"minced garlic",q:1.5,u:"tbsp"},{i:"fresh cilantro",q:null,u:"to taste"},{i:"cooking spray",q:null,u:"to taste"}],inst:["Mix 0.75 cup warm water, 1 tsp sugar, and 2 tsp yeast. Let sit 10-15 minutes until foamy. If it doesn't foam, the yeast is dead — start over.","In a large bowl combine 3 cups bread flour, 0.5 cup olive oil, 0.33 cup plain yogurt, the yeast mixture, and 0.5 tbsp salt. Mix until it clumps, then knead by hand for 15 minutes.","Place dough in a bowl, cover with a towel, and let rise in a warm place until doubled in size (~2 hours). Tip: warm oven to 170°F, turn it off, then place dough inside.","Divide into 6-8 pieces and flatten each with a rolling pin.","Heat a pan to high, spray with cooking spray, and fry each naan 1-2 minutes per side until golden. Spray again before flipping.","For garlic cilantro oil: simmer additional olive oil with 1.5 tbsp minced garlic and a pinch of salt on low. Remove from heat and stir in chopped fresh cilantro (to taste).","Brush garlic oil over naan and serve with butter chicken or tikka masala."]},
+  {id:"korean-vegetable-pancakes",name:"Korean Vegetable Pancakes (Pajeon)",srv:4,cu:["Korean"],cal:210,pro:5,carb:30,fat:8,ing:[{i:"flour",q:1,u:"cup"},{i:"kosher salt",q:0.5,u:"tsp"},{i:"water",q:1,u:"cup"},{i:"leek greens",q:1,u:"cup"},{i:"carrot",q:0.5,u:"cup"},{i:"scallions",q:3,u:"whole"},{i:"red cabbage",q:0.5,u:"cup"},{i:"jalapeño",q:1,u:"whole"},{i:"avocado oil",q:2,u:"tbsp"},{i:"soy sauce",q:2,u:"tbsp"},{i:"lemon juice",q:1,u:"tbsp"},{i:"sesame oil",q:1,u:"tbsp"},{i:"sesame seeds",q:1,u:"tsp"}],inst:["Mix 1 cup flour, 0.5 tsp kosher salt, and 1 cup water together in a bowl until smooth.","Add 1 cup leek greens, 0.5 cup grated carrot, 3 scallions (chopped), 0.5 cup red cabbage, and 1 sliced jalapeño. Mix until combined.","In a separate small bowl, whisk together 2 tbsp soy sauce, 1 tbsp lemon juice, a splash of water, 1 tbsp sesame oil, and 1 tsp sesame seeds to make the dipping sauce. Set aside.","Preheat a large pan over medium heat and add 2 tbsp avocado oil.","Scoop ¼ cup batter per pancake, flatten slightly with a spatula, and cook 2-3 minutes per side until golden brown.","Transfer to a paper towel-lined plate to drain excess oil.","Serve with dipping sauce."]},
+  {id:"big-mac-smash-tacos",name:"Big Mac Smash Tacos",srv:4,cu:["American"],cal:105,pro:16,carb:8,fat:4,ing:[{i:"low carb tortillas",q:4,u:"whole"},{i:"extra lean ground beef",q:0.5,u:"lbs"},{i:"fat free cheese slices",q:4,u:"whole"},{i:"pickles",q:null,u:"to taste"},{i:"shredded lettuce",q:null,u:"to taste"},{i:"onion",q:null,u:"to taste"},{i:"greek yogurt",q:0.33,u:"cup"},{i:"sugar free ketchup",q:2,u:"tbsp"},{i:"dill relish",q:2,u:"tbsp"},{i:"mustard",q:2,u:"tsp"},{i:"distilled white vinegar",q:2,u:"tsp"},{i:"onion powder",q:0.5,u:"tsp"},{i:"salt",q:null,u:"to taste"},{i:"pepper",q:null,u:"to taste"}],inst:["Mix 0.33 cup greek yogurt, 2 tbsp sugar-free ketchup, 2 tbsp dill relish, 2 tsp mustard, 2 tsp distilled white vinegar, 0.5 tsp onion powder, plus salt and pepper to taste to make Big Mac sauce. Set aside.","Preheat pan to high.","Divide 0.5 lbs extra lean ground beef into 4 portions (2 oz each). Spread one portion evenly over each of 4 low carb tortillas.","Place tortillas meat-side down in the hot pan and cook until beef is browned.","Flip and immediately add 1 fat-free cheese slice per tortilla (4 total).","Top with pickles, shredded lettuce, diced onion, and Big Mac sauce (all to taste). Serve immediately."]},
+  {id:"salt-pepper-chicken-chips",name:"Crispy Salt & Pepper Chicken and Chips",srv:4,cu:["Asian"],cal:436,pro:40,carb:47,fat:10,ing:[{i:"chicken breast",q:1.5,u:"lbs"},{i:"dark soy sauce",q:1,u:"tbsp"},{i:"low sodium soy sauce",q:1,u:"tbsp"},{i:"black pepper",q:2,u:"tsp"},{i:"garlic powder",q:2,u:"tsp"},{i:"cornstarch",q:3.5,u:"tbsp"},{i:"white potatoes",q:1.75,u:"lbs"},{i:"season salt",q:null,u:"to taste"},{i:"paprika",q:null,u:"to taste"},{i:"olive oil",q:2,u:"tsp"},{i:"onion",q:1,u:"medium"},{i:"red bell pepper",q:1,u:"medium"},{i:"green bell pepper",q:1,u:"medium"},{i:"chilli flakes",q:null,u:"to taste"},{i:"green onions",q:null,u:"to taste"}],inst:["Cube 1.5 lbs chicken breast and toss with 1 tbsp dark soy sauce, 1 tbsp low sodium soy sauce, 2 tsp black pepper, 2 tsp garlic powder, and 3.5 tbsp cornstarch until well coated.","Cook chicken: air fry at 392°F for 10-12 minutes, or pan fry per preference.","Cut 1.75 lbs white potatoes into chips and season with season salt, pepper, garlic powder, and paprika (to taste). Toss with 2 tsp olive oil.","Cook chips: bake at 410°F for 25 minutes, or air fry at 410°F for 12-15 minutes.","In a pan, sauté 1 medium chopped onion, 1 red bell pepper, and 1 green bell pepper. Season with salt, pepper, garlic, paprika, and chilli flakes to taste.","Combine chicken with sautéed vegetables and serve over chips. Garnish with chopped green onion.","Reheat tip: reheat chips in a pan or air fryer to restore crispiness."]},
+  {id:"sausage-lentil-soup",name:"Italian Sausage & Lentil Soup",srv:6,cu:["Italian"],cal:480,pro:32,carb:42,fat:16,ing:[{i:"olive oil",q:null,u:"to taste"},{i:"onion",q:1,u:"large"},{i:"salt",q:null,u:"to taste"},{i:"black pepper",q:null,u:"to taste"},{i:"Italian sausage",q:1,u:"lb"},{i:"garlic",q:6,u:"cloves"},{i:"onion powder",q:1,u:"tsp"},{i:"garlic powder",q:1,u:"tsp"},{i:"fresh thyme",q:3,u:"sprigs"},{i:"fresh oregano",q:2,u:"tbsp"},{i:"red pepper flakes",q:null,u:"to taste"},{i:"dry white wine",q:0.75,u:"cup"},{i:"canned tomatoes",q:14,u:"oz"},{i:"chicken stock",q:8,u:"cups"},{i:"black beluga lentils",q:2,u:"cups"},{i:"bay leaf",q:1,u:"whole"},{i:"baby spinach",q:5,u:"oz"},{i:"red wine vinegar",q:1,u:"tbsp"},{i:"fresh basil",q:null,u:"to taste"},{i:"grated parmesan",q:null,u:"to taste"}],inst:["Cover the bottom of a 5-8 quart pressure cooker with olive oil. Add 1 large chopped onion, season with salt, and sauté until softened and translucent, ~5 minutes.","Add 1 lb Italian sausage (casing removed) and break into small pieces. Cook until starting to brown, ~5 minutes.","Add 6 cloves minced garlic, 1 tsp onion powder, 1 tsp garlic powder, 3 sprigs fresh thyme, 2 tbsp fresh oregano, plus red pepper flakes and black pepper to taste. Stir and cook until fragrant, ~1 minute.","Add 0.75 cup dry white wine, scraping the bottom of the pot. Simmer until reduced by half, ~5 minutes.","Add 14 oz canned tomatoes (crush whole tomatoes by hand as you add them), 8 cups chicken stock, 2 cups black beluga lentils, and 1 bay leaf. Season with pepper and stir to combine.","Cover and set steam valve to sealed. Cook on high pressure for 10 minutes. Let pressure release naturally for 5 minutes, then release remaining pressure manually.","Remove thyme sprigs and bay leaf. Using the sauté setting, stir in 5 oz baby spinach and cook until wilted, 2-5 minutes.","Stir in 1 tbsp red wine vinegar and season to taste. Serve topped with fresh basil and grated parmesan."]},
+  {id:"mujadara",name:"Mujadara (Lentils & Rice with Caramelized Onions)",srv:6,cu:["Middle Eastern"],cal:390,pro:13,carb:52,fat:14,ing:[{i:"lentils",q:1,u:"cup"},{i:"kosher salt",q:null,u:"to taste"},{i:"ground cumin",q:1.5,u:"tsp"},{i:"olive oil",q:0.5,u:"cup"},{i:"yellow onion",q:3,u:"large"},{i:"black pepper",q:0.5,u:"tsp"},{i:"white basmati rice",q:1,u:"cup"},{i:"vegetable oil",q:3,u:"cups"}],inst:["Place 1 cup lentils, 1 tsp salt, 0.5 tsp cumin (from 1.5 tsp total), and 4 cups water in a saucepan. Partially cover and bring to a boil, then simmer until lentils are al dente, ~15 minutes. Remove from heat and set aside.","In a large lidded pan, heat 0.5 cup olive oil over medium-high. Add 3 large chopped yellow onions and cook without stirring until golden at the edges, 10-12 minutes. Reduce to medium and continue cooking, stirring occasionally, until deeply golden brown, 25-30 more minutes. Season with salt.","Stir 1 cup white basmati rice, 1.5 tsp salt, remaining 1 tsp cumin, and 0.5 tsp black pepper into the onions. Add lentils and their cooking liquid and bring to a boil. Taste and adjust seasoning.","Cover, reduce to low, and cook until liquid is absorbed and lentils and rice are fully cooked, ~18 minutes. Remove from heat and steam covered for 10 minutes.","Optional fried onion topping: heat 3 cups vegetable oil in a pot to 350°F. Fry thinly sliced onion in 2-3 batches, stirring, until golden brown, ~2 minutes per batch. Drain on paper towels.","Serve mujadara warm or at room temperature, topped with fried onions if using."]},
+  {id:"crispy-beef-walnut-yogurt",name:"Crispy Ground Beef with Walnut, Raisin & Cucumber Yogurt",srv:4,cu:["Middle Eastern"],cal:520,pro:34,carb:18,fat:36,ing:[{i:"greek yogurt",q:2,u:"cups"},{i:"mini cucumbers",q:2,u:"whole"},{i:"fresh mint",q:3,u:"tbsp"},{i:"garlic",q:1,u:"clove"},{i:"ground beef",q:1,u:"lb"},{i:"yellow onion",q:1,u:"small"},{i:"ground turmeric",q:0.5,u:"tsp"},{i:"kosher salt",q:2,u:"tsp"},{i:"black pepper",q:null,u:"to taste"},{i:"walnut halves",q:0.25,u:"cup"},{i:"raisins",q:2,u:"tbsp"},{i:"pomegranate molasses",q:null,u:"to taste"},{i:"pita bread",q:null,u:"as needed"}],inst:["Combine 2 cups Greek yogurt, 2 grated mini cucumbers, 3 tbsp chopped fresh mint, and 1 clove grated garlic in a bowl. Mix well and refrigerate until serving.","In a separate bowl, combine 1 lb ground beef, 1 small grated yellow onion, 0.5 tsp ground turmeric, 1 tsp salt (from 2 tsp total), and black pepper to taste. Mix well.","Heat a large cast-iron skillet over medium-high until very hot. Drop beef in large irregular chunks into the skillet. Cook undisturbed until charred and crisp on the underside and browned halfway up the sides, 6-8 minutes.","Toss the meat with a wooden spoon, breaking up large pieces. Add 0.25 cup walnut halves and 2 tbsp raisins and cook, stirring often, until meat is done and walnuts are toasted, 2-3 more minutes.","Season chilled yogurt with remaining 1 tsp salt. Spread on the bottom of a serving platter.","Top yogurt with crispy meat. Drizzle with pomegranate molasses (to taste) if using and garnish with mint leaves. Serve with warmed pita bread or rice."]},
+  {id:"garlic-butter-steak-potatoes",name:"Garlic Butter Steak with Crispy Potatoes & Parmesan Sauce",srv:3,cu:["American"],cal:720,pro:48,carb:38,fat:42,ing:[{i:"ribeye steak",q:2,u:"whole"},{i:"Cajun seasoning",q:4,u:"tsp"},{i:"sweet paprika",q:1.5,u:"tsp"},{i:"garlic granules",q:1,u:"tsp"},{i:"salt",q:null,u:"to taste"},{i:"black pepper",q:null,u:"to taste"},{i:"olive oil",q:2.5,u:"tbsp"},{i:"butter",q:0.75,u:"oz"},{i:"garlic",q:3,u:"cloves"},{i:"fresh parsley",q:null,u:"to taste"},{i:"baby potatoes",q:1.65,u:"lbs"},{i:"heavy cream",q:0.85,u:"cup"},{i:"grated parmesan",q:1.4,u:"oz"},{i:"broccoli",q:null,u:"to taste"}],inst:["Cut 1.65 lbs baby potatoes into cubes and toss with 2 tsp Cajun seasoning (from 4 tsp total), 0.75 tsp sweet paprika (from 1.5 tsp), 0.5 tsp garlic granules (from 1 tsp), salt and black pepper to taste, and 1.25 tbsp olive oil (from 2.5 tbsp total).","Roast or air fry potatoes until crispy and cooked through.","Season 2 cubed ribeye steaks with remaining 2 tsp Cajun seasoning, remaining 0.75 tsp sweet paprika, remaining 0.5 tsp garlic granules, plus salt and pepper to taste.","Heat remaining 1.25 tbsp olive oil in a pan over high heat. Sear steak cubes until browned on all sides.","Reduce heat, add 0.75 oz butter and 3 cloves chopped garlic. Baste steak with the garlic butter for 1-2 minutes. Finish with fresh parsley.","For the parmesan sauce: heat 0.85 cup heavy cream in a small saucepan over medium heat. Stir in 1.4 oz grated parmesan and a pinch of Cajun seasoning. Simmer until thickened.","Serve steak and crispy potatoes with parmesan sauce drizzled over. Add steamed or boiled broccoli on the side."]},
+  {id:"honey-garlic-chicken-fried-rice",name:"High Protein Crispy Honey Garlic Chicken Fried Rice",srv:7,cu:["Asian"],cal:546,pro:51,carb:66.5,fat:7,ing:[{i:"boneless skinless chicken breast",q:2.3,u:"lbs"},{i:"salt reduced soy sauce",q:0.75,u:"cup"},{i:"garlic",q:7,u:"cloves"},{i:"black pepper",q:0.5,u:"tsp"},{i:"onion powder",q:1,u:"tsp"},{i:"garlic powder",q:1,u:"tsp"},{i:"potato starch",q:0.33,u:"cup"},{i:"frozen mixed vegetables",q:3.5,u:"cups"},{i:"eggs",q:4,u:"whole"},{i:"egg whites",q:0.75,u:"cup"},{i:"scallions",q:1.75,u:"oz"},{i:"cooked white rice",q:5,u:"cups"},{i:"reduced sugar ketchup",q:0.4,u:"cup"},{i:"rice wine vinegar",q:1.75,u:"tbsp"},{i:"cornstarch",q:1,u:"tsp"},{i:"honey",q:0.33,u:"cup"}],inst:["Dice 2.3 lbs chicken breast and toss with 0.25 cup soy sauce (from 0.75 cup total), 4 cloves minced garlic (from 7 cloves total), 0.5 tsp black pepper, 1 tsp onion powder, and 1 tsp garlic powder until well coated.","Coat chicken pieces in 0.33 cup potato starch, shaking off excess.","Air fry or pan fry chicken until crispy and cooked through.","In a large pan or wok, scramble 4 eggs and 0.75 cup egg whites together, then push to the side.","Add 3.5 cups frozen mixed vegetables and cook until thawed and heated through.","Add 5 cups day-old cooked white rice and the white parts of 1.75 oz scallions. Stir fry everything together, mixing in the eggs.","Add 2 tbsp soy sauce (from remaining) and toss to combine. Finish with the green parts of the scallions.","For honey garlic sauce: combine remaining ~0.25 cup soy sauce, a splash of water, 0.4 cup reduced sugar ketchup, 1.75 tbsp rice wine vinegar, and 0.33 cup honey in a pan over medium heat. Mix 1 tsp cornstarch with water and stir in to thicken. Add remaining 3 cloves minced garlic and simmer until glossy.","Toss crispy chicken in honey garlic sauce and serve over fried rice."]}
+];
+
+// ═══════════════════════════════════════
+// MATCHING ENGINE
+// ═══════════════════════════════════════
+const DEFAULT_PANTRY=["olive oil","vegetable oil","avocado oil","avocado cooking spray","cooking spray","butter","light butter","salt","pepper","black pepper","white pepper","kosher salt","season salt","red pepper flakes","chilli flakes","garlic","minced garlic","garlic powder","garlic granules","onion","yellow onion","onion powder","sugar","flour","bread flour","cornstarch","potato starch","baking powder","water","warm water"];
+const SYN={"green onions":"scallions","spring onions":"scallions","soy sauce":"soy sauce","low sodium soy sauce":"soy sauce","dark soy sauce":"soy sauce","salt reduced soy sauce":"soy sauce","chicken stock":"chicken broth","jasmine rice":"white rice","long grain white rice":"white rice","white basmati rice":"white rice","cooked white rice":"white rice","lean ground beef":"ground beef","extra lean ground beef":"ground beef","beef mince":"ground beef","heavy cream":"cream","single cream":"cream","evaporated milk":"cream","light evaporated milk":"cream","ketchup":"ketchup","sugar free ketchup":"ketchup","reduced sugar ketchup":"ketchup","low carb wraps":"flour tortillas","flour tortillas":"flour tortillas","low carb tortillas":"flour tortillas","black beluga lentils":"lentils","reduced fat red pesto":"red pesto","boneless skinless chicken breast":"chicken breast","boneless skinless chicken thighs":"chicken thighs","rice wine vinegar":"rice vinegar"};
+const CCOL={"Italian":{bg:"rgba(253,151,31,0.14)",c:"#fd971f"},"Korean":{bg:"rgba(249,38,114,0.12)",c:"#f92672"},"Japanese":{bg:"rgba(166,226,46,0.12)",c:"#a6e22e"},"Tex-Mex":{bg:"rgba(249,38,114,0.12)",c:"#f92672"},"American":{bg:"rgba(166,226,46,0.12)",c:"#a6e22e"},"Indian":{bg:"rgba(255,110,180,0.12)",c:"#ff6eb4"},"Middle Eastern":{bg:"rgba(174,129,255,0.13)",c:"#ae81ff"},"Asian":{bg:"rgba(102,217,239,0.12)",c:"#66d9ef"}};
+const GCATS={"Proteins":["chicken breast","chicken thighs","ground beef","NY strip steak","ribeye steak","Italian sausage","eggs","egg whites"],"Produce":["tomato","shredded lettuce","fresh basil","fresh cilantro","fresh parsley","fresh mint","fresh thyme","fresh oregano","baby spinach","scallions","leek greens","carrot","red cabbage","jalape\u00f1o","zucchini","mini cucumbers","broccoli","red bell pepper","green bell pepper","sundried tomatoes"],"Dairy":["grated parmesan","cream","plain yogurt","greek yogurt","shredded light cheese","fat free cheese slices"],"Grains & Carbs":["white rice","flour tortillas","pita bread","baby potatoes","white potatoes"],"Sauces & Pantry":["gochujang","oyster sauce","soy sauce","sesame oil","tomato sauce","tomato paste","canned tomatoes","chicken broth","beef stock cubes","red pesto","white queso","ketchup","dill relish","mustard","distilled white vinegar","taco seasoning","Montreal steak seasoning","Cajun seasoning","Italian herbs","honey","brown sugar","rice vinegar","red wine vinegar","dry white wine","sesame seeds","lentils","walnut halves","raisins","pomegranate molasses","bay leaf","frozen mixed vegetables","yeast","ground cumin","ground turmeric","ginger","ginger powder","paprika","sweet paprika","cumin","parsley","pickles"]};
+
+function norm(item){let n=item.toLowerCase().replace(/\b(boneless |skinless |fresh |light |reduced fat |salt reduced |low sodium |dark |extra lean |fat free |shredded |grated |ground |dried |baby |mini |sweet )\b/g,"").trim();return SYN[n]||SYN[item.toLowerCase()]||n;}
+function isPantryItem(item){const n=norm(item);return(S.pantryProfile||new Set(DEFAULT_PANTRY)).has?S.pantryProfile.includes(n)||S.pantryProfile.includes(item.toLowerCase()):DEFAULT_PANTRY.includes(n);}
+function nonPantry(r){return[...new Set(r.ing.map(x=>norm(x.i)).filter(n=>!S.pantryProfile.includes(n)))];}
+function cumulativeSuggs(ids){if(!ids.length)return[];const u=[...new Set(ids)],union=new Set();u.forEach(id=>{const r=R.find(x=>x.id===id);if(r)nonPantry(r).forEach(n=>union.add(n));});return R.filter(r=>!u.includes(r.id)).map(r=>{const items=nonPantry(r),sh=items.filter(i=>union.has(i));return{r,score:sh.length,sh};}).filter(s=>s.score>0).sort((a,b)=>b.score-a.score).slice(0,8);}
+
+// ═══════════════════════════════════════
+// ENGINES
+// ═══════════════════════════════════════
+function getLeftoverCount(srv){return Math.max(0,Math.ceil(srv/2)-1);}
+const SLOTS=["breakfast","lunch","dinner"];
+
+function generateRunPlan(raceDate,distance,goalTime,level){
+  const race=new Date(raceDate+"T12:00:00"),now=new Date();now.setHours(12,0,0,0);
+  const totalDays=Math.floor((race-now)/864e5),totalWeeks=Math.floor(totalDays/7);
+  if(totalWeeks<4)return[];
+  const goalPace=goalTime/distance;
+  const paces={easy:goalPace+1.5,tempo:goalPace+0.3,speed:goalPace-0.3,long:goalPace+1.0,race:goalPace};
+  const plan=[],runDays=level==="beginner"?[1,3,6]:level==="intermediate"?[1,2,4,6]:[1,2,3,5,6];
+  const taperW=Math.max(1,Math.round(totalWeeks*0.08)),peakW=Math.max(1,Math.round(totalWeeks*0.12)),buildW=Math.max(1,Math.round(totalWeeks*0.25)),baseW=totalWeeks-taperW-peakW-buildW;
+  for(let w=0;w<totalWeeks;w++){
+    let phase,intensity;
+    if(w<baseW){phase="Base";intensity=0.6+0.2*(w/baseW);}
+    else if(w<baseW+buildW){phase="Build";intensity=0.8+0.15*((w-baseW)/buildW);}
+    else if(w<baseW+buildW+peakW){phase="Peak";intensity=0.95;}
+    else{phase="Taper";intensity=0.5+0.3*((totalWeeks-1-w)/taperW);}
+    const ws=new Date(now);ws.setDate(ws.getDate()+w*7);
+    for(let d=0;d<7;d++){
+      const day=new Date(ws);day.setDate(day.getDate()+d);if(day>race)break;
+      const dk=dkf(day),dow=day.getDay();
+      if(dk===raceDate){plan.push({date:dk,type:"RACE",dist:distance,pace:paces.race,phase:"Race Day"});break;}
+      if(!runDays.includes(dow))continue;
+      let type,dist,pace;
+      if(dow===6){type="Long Run";dist=Math.round(distance*intensity*10)/10;pace=paces.long;}
+      else if(dow===3||dow===2){type="Tempo";dist=Math.round(distance*0.4*intensity*10)/10;pace=paces.tempo;}
+      else if(dow===5){type="Speed";dist=Math.round(distance*0.3*intensity*10)/10;pace=paces.speed;}
+      else{type="Easy Run";dist=Math.round(distance*0.35*intensity*10)/10;pace=paces.easy;}
+      if(phase==="Taper"){type="Easy Run";pace=paces.easy;dist=Math.max(1,dist*0.6);}
+      dist=Math.round(Math.max(1,Math.min(dist,distance*1.2))*10)/10;
+      plan.push({date:dk,type,dist,pace:Math.round(pace*10)/10,phase});
+    }
+  }
+  // Dedup by date — keep first entry per date
+  const seen=new Set(),deduped=[];
+  plan.forEach(r=>{if(!seen.has(r.date)){seen.add(r.date);deduped.push(r);}});
+  return deduped;
+}
+function fmtPace(p){const m=Math.floor(p),s=Math.round((p-m)*60);return m+":"+(s<10?"0":"")+s;}
+function parsePace(s){if(!s)return 0;const parts=s.split(':');if(parts.length===2){const m=parseInt(parts[0]),sec=parseInt(parts[1]);return m+(sec/60);}return parseFloat(s)||0;}
+
+// ICS — CLASS:PRIVATE, [SOL] prefix
+function makeVEVENT(title,date,durationMin,desc){
+  const d=date.replace(/-/g,""),start=d+"T180000",h=Math.floor(durationMin/60),m=durationMin%60;
+  const end=d+"T"+(18+h<10?"0":"")+(18+h)+(m<10?"0":"")+m+"00";
+  const uid=d+"-"+Math.random().toString(36).slice(2,8)+"@sol";
+  return`BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:[SOL] ${title}\r\nDESCRIPTION:${(desc||"").replace(/\n/g,"\\n")}\r\nCLASS:PRIVATE\r\nEND:VEVENT`;
+}
+function wrapVCAL(v){return`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//SheetOfLife//EN\r\nMETHOD:PUBLISH\r\n${v}\r\nEND:VCALENDAR`;}
+function makeICS(t,d,dur,desc){return wrapVCAL(makeVEVENT(t,d,dur,desc));}
+function makeBatchICS(evts){return wrapVCAL(evts.map(e=>makeVEVENT(e.title,e.date,e.dur,e.desc)).join("\r\n"));}
+function dlICS(fn,c){const b=new Blob([c],{type:"text/calendar"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=fn;a.click();}
+
+// ═══════════════════════════════════════
+// STATE — permanent key "sol_data"
+// ═══════════════════════════════════════
+const today=new Date();today.setHours(0,0,0,0);
+const MOS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DWS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function dkf(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function parsedk(s){const p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2]);}
+function fmtDate(s){const d=parsedk(s);return MOS[d.getMonth()].slice(0,3)+" "+d.getDate();}
+function monthKey(y,m){return y+"-"+String(m+1).padStart(2,"0");}
+
+const SK="sol_data";
+function defaults(){return{
+  _schemaVersion:8,
+  // Meals: keyed by date, each date has {breakfast:[],lunch:[],dinner:[]}
+  // Each entry: {type:"cook"|"quick"|"eatout", id?:recipeId, name?:string}
+  meals:{},
+  quickMeals:["TJ's Orange Chicken","Frozen Pizza","Dino Nuggets"],
+  recurringEatout:[], // [dayOfWeek,...]
+  // Shopping
+  activeRun:{start:dkf(today),end:dkf(new Date(today.getFullYear(),today.getMonth(),today.getDate()+13)),chk:{}},
+  shopArchive:[], // [{start,end,recipes:[],purchased:{},closedAt}]
+  // Pantry
+  pantryProfile:[...DEFAULT_PANTRY],
+  // Running
+  runPlan:{raceDate:"",distance:13.1,goalTime:120,level:"intermediate"},
+  runDays:[],actualRuns:{}, // {date:{dist,pace,notes}}
+  // Learning: {date:[{topic,hours,notes},...]}
+  learnLog:{},
+  learnTopics:["Java - Codecademy","Recipe app project","SQL practice"], // named topics for dropdown
+  // Events
+  events:{}, // {date:[{title,time,notes}]}
+  // v0.8: People — {id:{id,name,tier?,birthday?,cadenceDays?,notes?,created}}
+  people:{},
+  // v0.8: Interactions — {date:[{id,personIds:[],type,notes?}]}
+  interactions:{},
+  // Monthly goals: {monthKey:{goals:[{label,target,unit}]}}
+  monthlyGoals:{},
+  defaultGoals:[{label:"Miles run",target:40,unit:"mi"},{label:"Meals cooked",target:16,unit:""},{label:"Learning hours",target:20,unit:"hr"}],
+  // Trips: [{id,name,start,end}]
+  trips:[],
+  // Event categories (user-defined, for analysis)
+  eventCategories:[],
+  // Chore templates: [{id, name, dow: 0-6}] — recurring chore schedule
+  choreTemplates:[
+    {id:"ct_default1",name:"Vacuum floors",dow:0},
+    {id:"ct_default2",name:"Mop floors",dow:0},
+    {id:"ct_default3",name:"Clean bathroom",dow:0},
+    {id:"ct_default4",name:"Change bed sheets",dow:0},
+    {id:"ct_default5",name:"Wipe appliances & stovetop",dow:0},
+    {id:"ct_default6",name:"Take out trash",dow:0}
+  ],
+  // Chore overrides: [{templateId, originalDate, movedTo}] — one-off reschedules
+  choreOverrides:[],
+  // Home / Chores (legacy checklist — kept for backward compat)
+  // choreItems: {daily:[{id,label}], weekly:[{id,label}], monthly:[{id,label}], quarterly:[{id,label}]}
+  choreItems:{
+    daily:[
+      {id:"ch_d1",label:"Wipe kitchen counters"},
+      {id:"ch_d2",label:"Do dishes"},
+      {id:"ch_d3",label:"Quick tidy of surfaces"}
+    ],
+    weekly:[
+      {id:"ch_w1",label:"Vacuum floors"},
+      {id:"ch_w2",label:"Mop floors"},
+      {id:"ch_w3",label:"Clean bathroom (toilet, sink, tub)"},
+      {id:"ch_w4",label:"Change bed sheets"},
+      {id:"ch_w5",label:"Wipe appliances & stovetop"},
+      {id:"ch_w6",label:"Take out trash"}
+    ],
+    monthly:[
+      {id:"ch_m1",label:"Clean microwave & oven"},
+      {id:"ch_m2",label:"Wipe cabinet fronts"},
+      {id:"ch_m3",label:"Dust fans & baseboards"},
+      {id:"ch_m4",label:"Clean mirrors & windows"},
+      {id:"ch_m5",label:"Wash bath mats & shower curtain"}
+    ],
+    quarterly:[
+      {id:"ch_q1",label:"Deep clean fridge"},
+      {id:"ch_q2",label:"Clean behind appliances"},
+      {id:"ch_q3",label:"Wash pillows & duvet"},
+      {id:"ch_q4",label:"Descale showerhead"}
+    ]
+  },
+  // choreLog: {choreId: "YYYY-MM-DD"} — date last completed
+  choreLog:{}
+};}
+
+function migrate(){
+  // Try loading from old keys
+  const oldKeys=["sol_v5","sol_v4","mealplanner_v3"];
+  for(const k of oldKeys){
+    try{const raw=localStorage.getItem(k);if(raw){const old=JSON.parse(raw);
+      // Migrate old format to new
+      const s=defaults();
+      // Convert old cooks to new meals format (all go to dinner slot)
+      if(old.cooks){Object.entries(old.cooks).forEach(([dk,ids])=>{if(!s.meals[dk])s.meals[dk]={breakfast:[],lunch:[],dinner:[]};ids.forEach(id=>s.meals[dk].dinner.push({type:"cook",id}));});}
+      if(old.quickDays){Object.entries(old.quickDays).forEach(([dk,names])=>{if(!s.meals[dk])s.meals[dk]={breakfast:[],lunch:[],dinner:[]};names.forEach(n=>s.meals[dk].dinner.push({type:"quick",name:n}));});}
+      if(old.eatoutDays){Object.entries(old.eatoutDays).forEach(([dk,labels])=>{if(!s.meals[dk])s.meals[dk]={breakfast:[],lunch:[],dinner:[]};labels.forEach(l=>s.meals[dk].dinner.push({type:"eatout",name:l}));});}
+      if(old.quickMeals)s.quickMeals=old.quickMeals;
+      if(old.recurringEatout)s.recurringEatout=old.recurringEatout;
+      if(old.tfStart)s.activeRun.start=old.tfStart;
+      if(old.tfEnd)s.activeRun.end=old.tfEnd;
+      if(old.chk)s.activeRun.chk=old.chk;
+      if(old.shopArchive)s.shopArchive=old.shopArchive;
+      if(old.runPlan)s.runPlan=old.runPlan;
+      if(old.runDays)s.runDays=old.runDays;
+      if(old.actualRuns)s.actualRuns=old.actualRuns;
+      // Migrate learnLog: old format {date:{topic,duration/hours}} → new {date:[{topic,hours}]}
+      if(old.learnLog){Object.entries(old.learnLog).forEach(([dk,entry])=>{if(Array.isArray(entry))s.learnLog[dk]=entry;else s.learnLog[dk]=[{topic:entry.topic,hours:entry.hours||Math.round((entry.duration||0)/60*100)/100,notes:entry.notes||""}];});}
+      if(old.learnQueue)s.learnTopics=[...new Set([...s.learnTopics,...old.learnQueue])];
+      if(old.learnTopics)s.learnTopics=[...new Set([...s.learnTopics,...old.learnTopics])];
+      // Backfill any topics appearing in log
+      Object.values(s.learnLog).forEach(entries=>{if(Array.isArray(entries))entries.forEach(e=>{if(e.topic&&!s.learnTopics.includes(e.topic))s.learnTopics.push(e.topic);});});
+      if(old.events)s.events=old.events;
+      return s;
+    }}catch(e){}}
+  return null;
+}
+
+function loadState(){
+  try{const raw=localStorage.getItem(SK);if(raw){const d=JSON.parse(raw);
+    // Migrations — RUN BEFORE filling defaults so newer defaults don't leak in as if they were user data
+    const needsMigration=d._schemaVersion!==8;
+    if(needsMigration){
+      // Save a one-time backup of the pre-migration data under a versioned key so it's recoverable
+      try{
+        const backupKey="sol_data_backup_v"+(d._schemaVersion||"unknown");
+        if(!localStorage.getItem(backupKey))localStorage.setItem(backupKey,raw);
+      }catch(_){}
+    }
+    // v6 → v7: learnQueue → learnTopics (from user's own data, not defaults)
+    if(d._schemaVersion!==7&&d._schemaVersion!==8){
+      const topics=[];const seen=new Set();
+      const pushTopic=t=>{if(t&&!seen.has(t)){seen.add(t);topics.push(t);}};
+      if(Array.isArray(d.learnTopics))d.learnTopics.forEach(pushTopic);
+      if(Array.isArray(d.learnQueue))d.learnQueue.forEach(pushTopic);
+      if(d.learnLog)Object.values(d.learnLog).forEach(entries=>{if(Array.isArray(entries))entries.forEach(e=>pushTopic(e.topic));});
+      d.learnTopics=topics;
+      delete d.learnQueue;
+      d._schemaVersion=7;
+    }
+    // v7 → v8: add people + interactions (empty objects; no data to transform)
+    if(d._schemaVersion===7){
+      if(!d.people)d.people={};
+      if(!d.interactions)d.interactions={};
+      d._schemaVersion=8;
+    }
+    // Now fill in any missing top-level keys from defaults (for genuinely new fields in future schema bumps)
+    const def=defaults();for(const k of Object.keys(def)){if(!(k in d))d[k]=def[k];}
+    // Seed default chore templates if the array is empty (user may have gotten an empty array before defaults were added)
+    if(Array.isArray(d.choreTemplates)&&d.choreTemplates.length===0)d.choreTemplates=def.choreTemplates;
+    // Dedup runDays by date on every load
+    if(d.runDays&&d.runDays.length){const seen=new Set(),clean=[];d.runDays.forEach(r=>{if(!seen.has(r.date)){seen.add(r.date);clean.push(r);}});d.runDays=clean;}
+    // Defensive: make sure any topic present in logs is in the dropdown
+    if(d.learnLog&&Array.isArray(d.learnTopics)){
+      const known=new Set(d.learnTopics);
+      Object.values(d.learnLog).forEach(entries=>{if(Array.isArray(entries))entries.forEach(e=>{if(e.topic&&!known.has(e.topic)){d.learnTopics.push(e.topic);known.add(e.topic);}});});
+    }
+    return d;
+  }}catch(e){}
+  const migrated=migrate();
+  if(migrated){
+    // Clear old keys after successful migration
+    ["sol_v5","sol_v4","mealplanner_v3"].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+    return migrated;
+  }
+  return defaults();
+}
+let S=loadState();
+function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
+
+// UI state
+let vM=today.getMonth(),vY=today.getFullYear(),tab="calendar",sel=null,fc="all",q="";
+let modal=false,mdate=null,mpick=null,modalTab="recipe",modalSlot="dinner",viewRecipe=null,sideCollapsed=false,hideChecked=false;
+let calView="month",twoWeekStart=null; // "month" | "2week"
+let dragChoreData=null;
+// v0.7: day-edit modal (for retro-editing past days)
+let dayEdit=false,dayEditDate=null;
+// v0.7: expanded learning log rows in Recent log
+let expandedLearnDate=null;
+// ICS import result (shown in Settings after an import)
+let icsImportResult=null;
+// Event detail/edit modal
+let eventEditModal=false,eventEditDk=null,eventEditIdx=null;
+// v0.8: People module state
+let peopleView="list"; // "list" | "detail" | "edit"
+let selectedPersonId=null;
+let peopleSearch="";
+let peopleFilter="all"; // "all" | tier name
+let personEditDraft=null; // the person being edited/created
+let logInteractionOpen=false; // true when the log-interaction modal is open
+let logInteractionSeed=null; // {date?, personIds?} for pre-populating
+
+function isInRun(dk){return dk>=S.activeRun.start&&dk<=S.activeRun.end;}
+function getRunCookIds(){const ids=[];Object.entries(S.meals).forEach(([dk,slots])=>{if(isInRun(dk))SLOTS.forEach(sl=>(slots[sl]||[]).forEach(e=>{if(e.type==="cook")ids.push(e.id);}));});return ids;}
+
+function ensureDay(dk){if(!S.meals[dk])S.meals[dk]={breakfast:[],lunch:[],dinner:[]};}
+
+function getGoals(y,m){const mk=monthKey(y,m);if(S.monthlyGoals[mk])return S.monthlyGoals[mk];return S.defaultGoals.map(g=>({...g}));}
+function setGoals(y,m,goals){S.monthlyGoals[monthKey(y,m)]=goals;save();}
+
+// ═══════════════════════════════════════
+// EFFECTIVE CALENDAR
+// ═══════════════════════════════════════
+function buildEff(){
+  const eff={};
+  // Meals (breakfast/lunch/dinner)
+  Object.entries(S.meals).forEach(([dk,slots])=>{
+    if(!eff[dk])eff[dk]=[];
+    SLOTS.forEach(sl=>{(slots[sl]||[]).forEach(e=>{
+      eff[dk].push({...e,slot:sl,src:dk});
+    });});
+  });
+  // Leftovers from cook entries (dinner slot)
+  Object.entries(S.meals).forEach(([dk,slots])=>{
+    (slots.dinner||[]).forEach(e=>{
+      if(e.type!=="cook")return;
+      const r=R.find(x=>x.id===e.id);if(!r)return;
+      const lo=getLeftoverCount(r.srv);if(lo<=0)return;
+      const base=new Date(dk+"T12:00:00");
+      for(let d=1;d<=lo;d++){
+        const next=new Date(base);next.setDate(next.getDate()+d);const nk=dkf(next);
+        if(!eff[nk])eff[nk]=[];
+        if(!eff[nk].some(x=>x.id===e.id&&x.type==="cook"&&x.slot==="dinner"))
+          eff[nk].push({type:"leftover",id:e.id,slot:"dinner",src:dk});
+      }
+    });
+  });
+  // Recurring eat out
+  if(S.recurringEatout.length>0){
+    const end=new Date(today.getFullYear(),today.getMonth()+31,0);
+    for(let d=new Date(today);d<=end;d.setDate(d.getDate()+1)){
+      if(S.recurringEatout.includes(d.getDay())){
+        const k=dkf(d);if(!eff[k])eff[k]=[];
+        if(!eff[k].some(e=>(e.type==="eatout"||e.type==="recurring")&&e.slot==="dinner"))
+          eff[k].push({type:"recurring",name:"Eat out ("+DWS[d.getDay()]+")",slot:"dinner",src:k});
+      }
+    }
+  }
+  // Runs — dedup by date, actual shown solid, planned shown ghost if actual exists
+  const seenRunDates=new Set();
+  S.runDays.forEach(r=>{const k=r.date;if(seenRunDates.has(k))return;seenRunDates.add(k);
+    if(!eff[k])eff[k]=[];
+    const actual=S.actualRuns[k];
+    if(actual){
+      eff[k].push({type:"run-actual",name:actual.dist+"mi "+fmtPace(actual.pace||0),dist:actual.dist,pace:actual.pace,src:k});
+      eff[k].push({type:"run-ghost",name:"plan: "+r.dist+"mi",dist:r.dist,pace:r.pace,phase:r.phase,src:k});
+    }else{
+      eff[k].push({type:"run",name:r.type+" "+r.dist+"mi",dist:r.dist,pace:r.pace,phase:r.phase,src:k});
+    }
+  });
+  // Actual runs on non-plan days
+  Object.entries(S.actualRuns).forEach(([dk,r])=>{
+    if(!S.runDays.some(p=>p.date===dk)){
+      if(!eff[dk])eff[dk]=[];
+      eff[dk].push({type:"run-actual",name:r.dist+"mi "+(r.pace?fmtPace(r.pace):""),dist:r.dist,pace:r.pace,src:dk});
+    }
+  });
+  // Learn
+  Object.entries(S.learnLog).forEach(([dk,entries])=>{if(!eff[dk])eff[dk]=[];
+    const total=entries.reduce((s,e)=>s+(e.hours||0),0);
+    eff[dk].push({type:"learn",name:Math.round(total*100)/100+"h learn",src:dk});
+  });
+  // Events
+  Object.entries(S.events).forEach(([dk,list])=>{if(!eff[dk])eff[dk]=[];list.forEach(ev=>eff[dk].push({type:"event",name:ev.title,time:ev.time,category:ev.category,src:dk}));});
+  // v0.8: Interactions on the day they happened
+  Object.entries(S.interactions||{}).forEach(([dk,list])=>{if(!eff[dk])eff[dk]=[];list.forEach(iv=>{
+    const names=(iv.personIds||[]).map(pid=>(S.people?.[pid]?.name)||"?").filter(Boolean);
+    const lbl=names.length?names.join(", "):"(unknown)";
+    eff[dk].push({type:"interaction",name:lbl+(iv.type?" ("+iv.type+")":""),iid:iv.id,src:dk});
+  });});
+  // v0.8: Birthdays — auto-show on the birthday each year within the viewed window.
+  // Birthday format can be "MM-DD" or "YYYY-MM-DD". We render for the current calendar
+  // view year and the next year (cheap to compute; visible on every month the user opens).
+  if(S.people){
+    const years=[vY,vY+1];
+    Object.values(S.people).forEach(p=>{
+      if(!p.birthday)return;
+      const parts=p.birthday.split("-");
+      let mm,dd;
+      if(parts.length===3){mm=parts[1];dd=parts[2];}
+      else if(parts.length===2){mm=parts[0];dd=parts[1];}
+      else return;
+      years.forEach(y=>{
+        const dk=y+"-"+mm+"-"+dd;
+        if(!eff[dk])eff[dk]=[];
+        // Don't double-add if a previous render already put the same birthday chip in
+        if(!eff[dk].some(e=>e.type==="birthday"&&e.personId===p.id)){
+          eff[dk].push({type:"birthday",name:"🎂 "+p.name,personId:p.id,src:dk});
+        }
+      });
+    });
+  }
+  // Chore templates — generate occurrences for a rolling window
+  const choreWinStart=new Date(vY,vM-2,1);const choreWinEnd=new Date(vY,vM+3,0);
+  (S.choreTemplates||[]).forEach(t=>{
+    let d=new Date(choreWinStart);
+    while(d.getDay()!==t.dow)d.setDate(d.getDate()+1);
+    while(d<=choreWinEnd){
+      const dk=dkf(d);
+      const override=(S.choreOverrides||[]).find(o=>o.templateId===t.id&&o.originalDate===dk);
+      if(!override){if(!eff[dk])eff[dk]=[];eff[dk].push({type:"chore",name:t.name,templateId:t.id,originalDate:dk});}
+      d.setDate(d.getDate()+7);
+    }
+  });
+  (S.choreOverrides||[]).forEach(o=>{
+    if(!o.movedTo)return;
+    const t=(S.choreTemplates||[]).find(x=>x.id===o.templateId);if(!t)return;
+    if(!eff[o.movedTo])eff[o.movedTo]=[];
+    if(!eff[o.movedTo].some(e=>e.type==="chore"&&e.templateId===t.id&&e.originalDate===o.originalDate))
+      eff[o.movedTo].push({type:"chore",name:t.name,templateId:t.id,originalDate:o.originalDate,movedFrom:o.originalDate});
+  });
+  return eff;
+}
+
+function buildShop(){
+  const ids=getRunCookIds();if(!ids.length)return{};
+  const map={};ids.forEach(id=>{const r=R.find(x=>x.id===id);if(!r)return;r.ing.forEach(ing=>{
+    const n=norm(ing.i);const staple=S.pantryProfile.includes(n)||S.pantryProfile.includes(ing.i.toLowerCase());
+    const k=staple?"_s_"+n:n;
+    if(!map[k])map[k]={name:staple?ing.i:n,unit:ing.u,total:0,hasQ:false,staple};
+    if(ing.q!==null){map[k].total+=ing.q;map[k].hasQ=true;}
+  });});
+  const cats={};Object.entries(map).forEach(([k,v])=>{
+    if(v.staple){(cats["Pantry Staples"]||(cats["Pantry Staples"]=[])).push({k,...v});return;}
+    let cat="Other";for(const[c,arr]of Object.entries(GCATS)){if(arr.includes(v.name)){cat=c;break;}}
+    (cats[cat]||(cats[cat]=[])).push({k,...v});
+  });return cats;
+}
+
+function monthStats(y,m){
+  const mk=monthKey(y,m);
+  let cook=0,eatout=0,pMi=0,aMi=0,lHrs=0;
+  Object.entries(S.meals).forEach(([dk,slots])=>{if(!dk.startsWith(mk))return;SLOTS.forEach(sl=>(slots[sl]||[]).forEach(e=>{if(e.type==="cook")cook++;if(e.type==="eatout")eatout++;}));});
+  S.runDays.forEach(r=>{if(r.date.startsWith(mk))pMi+=r.dist;});
+  Object.entries(S.actualRuns).forEach(([dk,r])=>{if(dk.startsWith(mk))aMi+=(r.dist||0);});
+  Object.entries(S.learnLog).forEach(([dk,entries])=>{if(dk.startsWith(mk))entries.forEach(e=>lHrs+=(e.hours||0));});
+  return{cook,eatout,pMi:Math.round(pMi*10)/10,aMi:Math.round(aMi*10)/10,lHrs:Math.round(lHrs*100)/100};
+}
+
+function learnStreak(){let s=0;const d=new Date(today);while(true){const k=dkf(d);if(S.learnLog[k]&&S.learnLog[k].length>0)s++;else break;d.setDate(d.getDate()-1);if(s>365)break;}return s;}
+
+// ═══════════════════════════════════════
+// ICS IMPORT ENGINE
+// ═══════════════════════════════════════
+function parseICSDate(val,params){
+  // val: "20260502" | "20260502T180000Z" | "20260502T180000"
+  // params: e.g. "VALUE=DATE" | "TZID=America/Chicago" | ""
+  const isDate=params.includes('VALUE=DATE')||(val.length===8&&!val.includes('T'));
+  const ymd=val.slice(0,4)+'-'+val.slice(4,6)+'-'+val.slice(6,8);
+  if(isDate)return{dk:ymd,time:null};
+  const time=val.length>=13?val.slice(9,11)+':'+val.slice(11,13):null;
+  return{dk:ymd,time};
+}
+
+function expandRRule(rrule,startDk,time,title,notes){
+  const p={};
+  rrule.split(';').forEach(s=>{const[k,v]=s.split('=');if(k)p[k]=v;});
+  const freq=p.FREQ;
+  if(!['DAILY','WEEKLY','MONTHLY','YEARLY'].includes(freq))return[];
+  const maxCount=p.COUNT?Math.min(parseInt(p.COUNT),500):500;
+  const untilStr=p.UNTIL?p.UNTIL.replace(/[^0-9]/g,'').slice(0,8):null;
+  const interval=p.INTERVAL?parseInt(p.INTERVAL):1;
+  const byDay=p.BYDAY?p.BYDAY.split(','):null;
+  const DAY={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6};
+  const maxDate=new Date(today.getFullYear()+2,today.getMonth(),today.getDate());
+  const results=[];
+  let cur=parsedk(startDk);
+  let count=0;
+  const push=dk=>{results.push({dk,time,title,notes});count++;};
+  const overLimit=()=>count>=maxCount||cur>maxDate;
+  const pastUntil=dk=>untilStr&&dk.replace(/-/g,'')>untilStr;
+
+  if(freq==='WEEKLY'&&byDay&&byDay.length>1){
+    // Multi-day weekly: walk day-by-day within valid weeks
+    const days=new Set(byDay.map(d=>DAY[d]).filter(n=>n!=null));
+    cur=parsedk(startDk);cur.setDate(cur.getDate()+1);
+    while(!overLimit()){
+      const dk=dkf(cur);if(pastUntil(dk))break;
+      if(days.has(cur.getDay()))push(dk);
+      cur.setDate(cur.getDate()+1);
+    }
+    return results;
+  }
+
+  // Advance past the original occurrence first
+  if(freq==='DAILY')cur.setDate(cur.getDate()+interval);
+  else if(freq==='WEEKLY')cur.setDate(cur.getDate()+7*interval);
+  else if(freq==='MONTHLY')cur.setMonth(cur.getMonth()+interval);
+  else if(freq==='YEARLY')cur.setFullYear(cur.getFullYear()+interval);
+
+  while(!overLimit()){
+    const dk=dkf(cur);if(pastUntil(dk))break;
+    push(dk);
+    if(freq==='DAILY')cur.setDate(cur.getDate()+interval);
+    else if(freq==='WEEKLY')cur.setDate(cur.getDate()+7*interval);
+    else if(freq==='MONTHLY')cur.setMonth(cur.getMonth()+interval);
+    else if(freq==='YEARLY')cur.setFullYear(cur.getFullYear()+interval);
+    else break;
+  }
+  return results;
+}
+
+function parseICS(raw){
+  // Unfold folded lines (RFC 5545: CRLF + whitespace = continuation)
+  const text=raw.replace(/\r\n[ \t]/g,'').replace(/\n[ \t]/g,'');
+  const lines=text.split(/\r?\n/);
+  const events=[];
+  let inV=false,cur={};
+  for(const line of lines){
+    if(line==='BEGIN:VEVENT'){inV=true;cur={};continue;}
+    if(line==='END:VEVENT'){inV=false;if(cur.dtstart)events.push(cur);cur={};continue;}
+    if(!inV)continue;
+    const ci=line.indexOf(':');if(ci<0)continue;
+    const propFull=line.slice(0,ci),val=line.slice(ci+1);
+    const si=propFull.indexOf(';');
+    const prop=si>=0?propFull.slice(0,si):propFull;
+    const params=si>=0?propFull.slice(si+1):'';
+    const clean=s=>s.replace(/\\,/g,',').replace(/\\n/g,' ').replace(/\\;/g,';').replace(/\\t/g,' ').trim();
+    if(prop==='SUMMARY')cur.title=clean(val);
+    else if(prop==='DESCRIPTION')cur.notes=clean(val);
+    else if(prop==='DTSTART')cur.dtstart=parseICSDate(val.trim(),params);
+    else if(prop==='RRULE')cur.rrule=val.trim();
+    else if(prop==='STATUS')cur.status=val.trim();
+  }
+  return events;
+}
+
+window.triggerICSImport=()=>document.getElementById('ics-file-input').click();
+
+window.handleICSFile=input=>{
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const evs=parseICS(e.target.result);
+    let added=0,skipped=0,recurring=0;
+    const addEv=(dk,title,time,notes)=>{
+      if(!title||!dk){skipped++;return false;}
+      if(!S.events[dk])S.events[dk]=[];
+      // Deduplicate: same title same day
+      if(S.events[dk].some(x=>x.title===title)){skipped++;return false;}
+      const ev={title};
+      if(time)ev.time=time;
+      if(notes)ev.notes=notes.slice(0,300);
+      S.events[dk].push(ev);
+      added++;return true;
+    };
+    for(const ev of evs){
+      if(ev.status==='CANCELLED'){skipped++;continue;}
+      const{dk,time}=ev.dtstart;
+      addEv(dk,ev.title||'(no title)',time,ev.notes||'');
+      if(ev.rrule){
+        const expanded=expandRRule(ev.rrule,dk,time,ev.title||'(no title)',ev.notes||'');
+        expanded.forEach(r=>addEv(r.dk,r.title,r.time,r.notes)&&recurring++);
+      }
+    }
+    icsImportResult={added,skipped,recurring,total:evs.length,file:file.name};
+    input.value='';
+    save();render();
+  };
+  reader.readAsText(file);
+};
+
+window.clearIcsResult=()=>{icsImportResult=null;render();};
+
+// ═══════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════
+function render(){
+  const cuisines=[...new Set(R.flatMap(r=>r.cu))].sort();
+  const filt=R.filter(r=>(fc==="all"||r.cu.includes(fc))&&(!q||r.name.toLowerCase().includes(q.toLowerCase())));
+  const maxM=new Date(today.getFullYear(),today.getMonth()+30,1);
+  let days,canFwd;
+  if(calView==="2week"){const s=getTwoWeekStart();days=calDays2Week(s);const nxt=new Date(s);nxt.setDate(nxt.getDate()+14);canFwd=nxt<=maxM;}
+  else{days=calDays(vY,vM);canFwd=new Date(vY,vM+1,1)<=maxM;}
+  const eff=buildEff();const runIds=getRunCookIds();const sg=cumulativeSuggs(runIds);
+  const stats=monthStats(vY,vM);const streak=learnStreak();
+  const showSide=(tab==="calendar"||tab==="shopping")&&!sideCollapsed;
+  const goals=getGoals(vY,vM);
+  const gvals=[stats.aMi,stats.cook,stats.lHrs];
+
+  document.getElementById("root").innerHTML=`<div class="app">
+    <div class="nav">
+      <span class="nav-t">Sheet of Life<span class="nav-ver">v0.10.2</span></span>
+      ${["calendar","shopping","finances","home","running","learning","people","pulse","settings"].map(t=>`<button class="tb${tab===t?" on":""}" onclick="ST('${t}')">${t==="pulse"?"Pulse":t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join("")}
+    </div>
+    <div class="main">
+      ${(tab==="calendar"||tab==="shopping")?`<div class="side${sideCollapsed?" collapsed":""}">
+        <div class="side-toggle" onclick="toggleSide()">${sideCollapsed?"\u25b6":"\u25c0"}</div>
+        ${!sideCollapsed?`<div class="lbl">Recipes</div>
+        <input class="sinp" placeholder="Search..." value="${q.replace(/"/g,"&quot;")}" oninput="SQ(this.value)">
+        <div class="fbar"><button class="fb${fc==="all"?" on":""}" onclick="SF('all')">all</button>${cuisines.map(c=>`<button class="fb${fc===c?" on":""}" onclick="SF('${c}')">${c.toLowerCase()}</button>`).join("")}</div>
+        ${filt.map(r=>{const col=CCOL[r.cu[0]]||{bg:"#eee",c:"#333"};return`<div class="rc${sel===r.id?" on":""}" onclick="SR('${r.id}')"><div class="rcn">${r.name}</div><div class="rct"><span class="tag" style="background:${col.bg};color:${col.c}">${r.cu[0]}</span><span class="tag" style="background:var(--bg3);color:var(--text2)">${r.srv}srv</span><span class="tag" style="background:var(--teal-bg);color:var(--teal-t);cursor:pointer" onclick="event.stopPropagation();VR('${r.id}')">view</span></div></div>`;}).join("")}
+        <div style="margin-top:6px"><div class="lbl">Quick meals</div>${S.quickMeals.map(m=>`<div style="font-size:10px;padding:2px 0;color:var(--text2)">${m}</div>`).join("")}</div>`:""}
+      </div>`:""}
+      <div class="cnt${tab==="calendar"?" cal-mode":""}">
+        ${tab==="calendar"?renderCal(days,eff,sg,canFwd,runIds,stats,goals,gvals):
+          tab==="shopping"?renderShop():
+          tab==="finances"?renderFinances():
+          tab==="home"?renderHome():
+          tab==="running"?renderRunning():
+          tab==="learning"?renderLearning(streak):
+          tab==="people"?renderPeople():
+          tab==="pulse"?renderPulse(stats,streak):
+          renderSettings()}
+      </div>
+    </div>
+    ${modal?renderModal(sg):""}
+    ${dayEdit?renderDayEditModal():""}
+    ${logInteractionOpen?renderLogInteractionModal():""}
+    ${viewRecipe?renderRecipePanel():""}
+    ${eventEditModal?renderEventEditModal():""}
+  </div>`;
+}
+
+function calDays(y,m){const f=new Date(y,m,1),l=new Date(y,m+1,0),days=[];for(let i=0;i<f.getDay();i++)days.push({d:new Date(y,m,-(f.getDay()-i-1)),mine:false});for(let i=1;i<=l.getDate();i++)days.push({d:new Date(y,m,i),mine:true});while(days.length%7!==0){const p=days[days.length-1].d;days.push({d:new Date(p.getFullYear(),p.getMonth(),p.getDate()+1),mine:false});}return days;}
+
+// 2-week view helpers
+function getTwoWeekStart(){
+  if(twoWeekStart) return new Date(twoWeekStart);
+  const d=new Date(today);d.setDate(d.getDate()-d.getDay());d.setHours(0,0,0,0);return d;
+}
+function calDays2Week(start){
+  const days=[];
+  for(let i=0;i<14;i++){const d=new Date(start);d.setDate(start.getDate()+i);d.setHours(0,0,0,0);days.push({d,mine:true});}
+  return days;
+}
+function fmt2WkTitle(start){
+  const end=new Date(start);end.setDate(end.getDate()+13);
+  const sm=MOS[start.getMonth()].slice(0,3),em=MOS[end.getMonth()].slice(0,3);
+  const sy=start.getFullYear(),ey=end.getFullYear();
+  if(sy===ey&&sm===em)return`${sm} ${start.getDate()}–${end.getDate()}, ${sy}`;
+  if(sy===ey)return`${sm} ${start.getDate()} – ${em} ${end.getDate()}, ${sy}`;
+  return`${sm} ${start.getDate()}, ${sy} – ${em} ${end.getDate()}, ${ey}`;
+}
+window.P2W=()=>{const s=getTwoWeekStart();s.setDate(s.getDate()-14);twoWeekStart=s;vY=s.getFullYear();vM=s.getMonth();render();};
+window.N2W=()=>{const s=getTwoWeekStart();s.setDate(s.getDate()+14);twoWeekStart=s;vY=s.getFullYear();vM=s.getMonth();render();};
+window.setCalView=v=>{
+  calView=v;
+  if(v==="2week"){
+    // Snap 2-week window to contain the currently viewed month's first day, snapped to Sunday
+    if(!twoWeekStart){const d=new Date(today);d.setDate(d.getDate()-d.getDay());d.setHours(0,0,0,0);twoWeekStart=d;}
+    else{const d=new Date(twoWeekStart);vY=d.getFullYear();vM=d.getMonth();}
+  }else{
+    // Snap month view to the 2-week window's month when switching back
+    if(twoWeekStart){const d=new Date(twoWeekStart);vY=d.getFullYear();vM=d.getMonth();}
+  }
+  render();
+};
+
+const TRIP_COLORS=['#f92672','#66d9ef','#a6e22e','#fd971f','#ae81ff','#e6db74'];
+function renderCal(days,eff,sg,canFwd,runIds,stats,goals,gvals){
+  const runRC=[...new Set(runIds)].length;
+  const weeks=Math.ceil(days.length/7);
+  // Build trip map: dk → {trip, color, isFirst, isLast}
+  const tripMap={};
+  (S.trips||[]).forEach((t,ti)=>{
+    const col=TRIP_COLORS[ti%TRIP_COLORS.length];
+    let cur=parsedk(t.start);const end=parsedk(t.end);
+    while(cur<=end){
+      const dk=dkf(cur);
+      if(!tripMap[dk])tripMap[dk]=[];
+      tripMap[dk].push({trip:t,col,isFirst:dk===t.start,isLast:dk===t.end});
+      cur.setDate(cur.getDate()+1);
+    }
+  });
+  return`
+    <div class="cal-scroll-top">
+    <div class="goals-bar">${goals.map((g,i)=>{const pct=Math.min(100,Math.round((gvals[i]||0)/g.target*100));return`<div class="goal-card"><div class="goal-label">${g.label}</div><div class="goal-val">${gvals[i]||0}<span style="font-size:12px;color:var(--text2)"> / ${g.target}${g.unit?" "+g.unit:""}</span></div><div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${pct>=100?"var(--green)":"var(--blue)"}"></div></div></div>`;}).join("")}</div>
+    <div class="tf-bar"><span class="tf-label">Shopping run</span><input type="date" class="tf-inp" value="${S.activeRun.start}" onchange="TFS(this.value)"><span style="color:var(--text3);font-size:11px">to</span><input type="date" class="tf-inp" value="${S.activeRun.end}" onchange="TFE(this.value)"><span class="tf-stats"><span class="tf-hl">${runRC}</span> recipes</span>${runIds.length>0?`<button class="tb" onclick="archiveRun()">Close &amp; archive</button>`:""}</div>
+    ${runIds.length>0&&sg.length?`<div class="sbox"><div class="sbox-hd">Best matches for this shopping run</div><div class="sgrid">${sg.slice(0,4).map(s=>`<div class="si" onclick="SR('${s.r.id}')"><div class="si-name">${s.r.name}</div><div class="si-meta"><span class="pill pill-g">${s.score} shared</span><span>${s.sh.slice(0,3).join(", ")}</span></div></div>`).join("")}</div></div>`:""}
+    <div class="cal-hdr">
+      ${calView==="2week"
+        ?`<button class="arr" onclick="P2W()">\u2039</button><span class="cal-mo">${fmt2WkTitle(getTwoWeekStart())}</span><button class="arr" onclick="N2W()"${!canFwd?" disabled":""}>\u203a</button>`
+        :`<button class="arr" onclick="PM()">\u2039</button><span class="cal-mo">${MOS[vM]} ${vY}</span><button class="arr" onclick="NM()"${!canFwd?" disabled":""}>\u203a</button>`
+      }
+      <div class="vt-grp"><button class="vt-btn${calView==="month"?" on":""}" onclick="setCalView('month')">Month</button><button class="vt-btn${calView==="2week"?" on":""}" onclick="setCalView('2week')">2 Weeks</button></div>
+    </div>
+    </div>
+    <div class="cal-wrap">
+    <div class="cgrid flex-fill" style="--weeks:${weeks}">${DWS.map(d=>`<div class="dow">${d}</div>`).join("")}${days.map(({d,mine})=>{
+      const k=dkf(d),de=eff[k]||[],isT=d.getTime()===today.getTime(),isPast=d<today&&!isT,inRun=isInRun(k)&&mine;
+      const hasCook=de.some(e=>e.type==="cook");
+      const cls=["day",!mine?"om":"",isT?"td":"",isPast&&mine?"pd":"",hasCook&&mine?"hm":"",inRun?"in-tf":""].filter(Boolean).join(" ");
+      // Group by slot for display
+      const mealTypes=new Set(["cook","leftover","quick","eatout","recurring"]);
+      const breakfasts=de.filter(e=>e.slot==="breakfast");
+      const lunches=de.filter(e=>e.slot==="lunch");
+      const dinners=de.filter(e=>e.slot==="dinner"||(mealTypes.has(e.type)&&!e.slot));
+      const nonMeal=de.filter(e=>!mealTypes.has(e.type)&&e.type!=="recurring");
+      // v0.7: past days open day-edit modal; today & future open add modal
+      const clickHandler=mine?(isPast?` onclick="EDITDAY('${k}')"`:` onclick="OM('${k}')"`):"";
+      const addLabel=mine?(isPast?`<div class="da">\u270f edit</div>`:`<div class="da">+ add</div>`):"";
+      const dayTrips=tripMap[k]||[];
+      const tripStyle=dayTrips.length?`border-top:2px solid ${dayTrips[0].col};`:"";
+      const tripBands=dayTrips.map(({trip,col,isFirst,isLast})=>`<div class="trip-band" style="color:${col}">${isFirst?`✈ ${trip.name}`:isLast?`⬛ ${trip.name}`:'&nbsp;'}</div>`).join("");
+      return`<div class="${cls}" style="${tripStyle}"${clickHandler} ondragover="event.preventDefault()" ondrop="choreDropOnDay('${k}',event)">
+        <div class="dn">${d.getDate()}</div>
+        <div class="day-content">
+        ${tripBands}
+        ${breakfasts.length?breakfasts.map(e=>chip(e,k)).join(""):""}
+        ${lunches.length?lunches.map(e=>chip(e,k)).join(""):""}
+        ${dinners.map(e=>chip(e,k)).join("")}
+        ${nonMeal.map(e=>chip(e,k)).join("")}
+        </div>
+        ${addLabel}
+      </div>`;}).join("")}</div>
+    </div>
+    <div class="legend">
+      <span><span class="leg-dot" style="background:var(--blue)"></span>Cook</span>
+      <span><span class="leg-dot" style="background:var(--bg4)"></span>Leftover</span>
+      <span><span class="leg-dot" style="background:var(--amber-bg);border:1px solid var(--amber-t)"></span>Quick</span>
+      <span><span class="leg-dot" style="background:var(--coral-bg);border:1px solid var(--coral-t)"></span>Eat out</span>
+      <span><span class="leg-dot" style="background:var(--teal-t)"></span>Run (actual)</span>
+      <span><span class="leg-dot" style="background:var(--teal-bg);border:1px dashed var(--teal-t)"></span>Run (plan)</span>
+      <span><span class="leg-dot" style="background:var(--purple-bg);border:1px solid var(--purple-t)"></span>Learn</span>
+      <span><span class="leg-dot" style="background:var(--pink-bg);border:1px solid var(--pink-t)"></span>Interaction</span>
+      <span><span class="leg-dot" style="background:#FFF3E0;border:1px solid #C66E00"></span>Birthday</span>
+      <span><span class="leg-dot" style="background:rgba(230,219,116,0.1);border:1px solid var(--yellow)"></span>Chore</span>
+    </div>`;
+}
+
+const CAT_PALETTE=['#ae81ff','#66d9ef','#a6e22e','#fd971f','#f92672','#e6db74','#ff6eb4'];
+function getCatColor(cat){if(!cat)return'var(--text3)';const idx=(S.eventCategories||[]).indexOf(cat);return idx<0?'var(--text3)':CAT_PALETTE[idx%CAT_PALETTE.length];}
+function chip(e,k){
+  const n=e.name||(e.id?R.find(x=>x.id===e.id)?.name:"");const short=n?n.length>24?n.slice(0,22)+"\u2026":n:"";
+  const ts="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+  const slotPrefix=e.slot&&e.slot!=="dinner"?`<span style="font-size:6px;text-transform:uppercase;opacity:.7;margin-right:2px;flex-shrink:0">${e.slot.charAt(0)}</span>`:"";
+  if(e.type==="cook"){return`<div class="mc cook" onclick="event.stopPropagation();VR('${e.id}')" title="${n}">${slotPrefix}<span style="${ts}">${short}</span><span class="mx" onclick="event.stopPropagation();rmMeal('${k}','${e.slot}',${getMealIdx(k,e.slot,e)})">\u2715</span></div>`;}
+  if(e.type==="leftover"){return`<div class="mc leftover" onclick="event.stopPropagation();VR('${e.id}')" title="${n} (leftover)">${slotPrefix}<span style="${ts}">${short} \u2606</span></div>`;}
+  if(e.type==="quick"){return`<div class="mc quick" onclick="event.stopPropagation();rmMeal('${k}','${e.slot}',${getMealIdx(k,e.slot,e)})" title="${n}">${slotPrefix}<span style="${ts}">${short}</span><span class="mx">\u2715</span></div>`;}
+  if(e.type==="eatout"){return`<div class="mc eatout" onclick="event.stopPropagation();rmMeal('${k}','${e.slot}',${getMealIdx(k,e.slot,e)})" title="${n}">${slotPrefix}<span style="${ts}">${short}</span><span class="mx">\u2715</span></div>`;}
+  if(e.type==="recurring"){return`<div class="mc recurring">${slotPrefix}<span style="${ts}">${short}</span></div>`;}
+  if(e.type==="run"){return`<div class="mc run" title="${e.name}"><span style="${ts}">${short}</span></div>`;}
+  if(e.type==="run-actual"){return`<div class="mc run-actual" title="Actual: ${e.dist}mi"><span style="${ts}">${short}</span></div>`;}
+  if(e.type==="run-ghost"){return`<div class="mc run-ghost" title="Planned: ${e.name}"><span style="${ts}">${short}</span></div>`;}
+  if(e.type==="learn"){return`<div class="mc learn" title="${n}"><span style="${ts}">${short}</span></div>`;}
+  if(e.type==="event"){const ei=S.events[k]?.findIndex(x=>x.title===(e.name||""))??-1;const catColor=getCatColor(e.category);return`<div class="mc event" style="border-left-color:${catColor}" onclick="event.stopPropagation();openEventEdit('${k}',${ei})" title="${n}${e.category?' ['+e.category+']':''} \u2014 click to edit"><span style="${ts}">${short}</span><span class="mx" onclick="event.stopPropagation();rmEvent('${k}',${ei})" title="Delete">\u2715</span></div>`;}
+  if(e.type==="chore"){return`<div class="mc chore" draggable="true" ondragstart="choreDragStart('${e.templateId}','${e.originalDate}',event)" onclick="event.stopPropagation()" title="${n} \u2014 drag to reschedule${e.movedFrom?' (rescheduled)':''}"><span style="${ts}">${short}${e.movedFrom?' \u2195':''}</span></div>`;}
+  if(e.type==="interaction"){return`<div class="mc interaction" onclick="event.stopPropagation();rmInteraction('${k}','${e.iid||""}')" title="${n.replace(/"/g,"&quot;")} (click to remove)"><span style="${ts}">${short}</span><span class="mx">\u2715</span></div>`;}
+  if(e.type==="birthday"){return`<div class="mc birthday" onclick="event.stopPropagation();openPersonDetail('${e.personId}')" title="${n.replace(/"/g,"&quot;")}"><span style="${ts}">${short}</span></div>`;}
+  return"";
+}
+function getMealIdx(dk,slot,entry){
+  const meals=S.meals[dk]?.[slot]||[];
+  return meals.findIndex(m=>m.type===entry.type&&(m.id||"")===(entry.id||"")&&(m.name||"")===(entry.name||""));
+}
+
+function renderShop(){
+  const shop=buildShop();const ids=getRunCookIds();
+  const unames=[...new Set(ids.map(id=>R.find(x=>x.id===id)?.name).filter(Boolean))];
+  const archHtml=S.shopArchive.length?`<div style="margin-top:20px"><div class="lbl">Past shopping runs</div>${S.shopArchive.slice().reverse().map(a=>{
+    const rnames=[...new Set(a.recipes)].map(id=>R.find(x=>x.id===id)?.name||id).filter(Boolean);
+    const bought=a.purchased?Object.values(a.purchased).filter(Boolean).length:0;
+    const total=a.purchased?Object.keys(a.purchased).length:0;
+    return`<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:11px"><div style="display:flex;justify-content:space-between"><span style="font-weight:500">${fmtDate(a.start)} \u2013 ${fmtDate(a.end)}</span><span style="color:var(--text3)">${bought}/${total} bought</span></div><div style="font-size:10px;color:var(--text2);margin-top:2px">${rnames.join(", ")}</div></div>`;}).join("")}</div>`:"";
+  if(!ids.length)return`<div class="empty">No meals in your current shopping run. Add recipes to the calendar first.</div>${archHtml}`;
+  const checkedCount=Object.values(S.activeRun.chk).filter(Boolean).length;
+  return`<div class="sh-hdr"><div><span class="sh-t">Shopping list</span><div style="font-size:10px;color:var(--text2);margin-top:2px">${fmtDate(S.activeRun.start)} \u2013 ${fmtDate(S.activeRun.end)} \u00b7 ${unames.join(", ")}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap">${checkedCount>0?`<button class="tb" onclick="toggleHideChecked()">${hideChecked?"Show":"Hide"} checked (${checkedCount})</button>`:"" }<button class="dbtn" onclick="clearChk()">Clear checked</button><button class="tb" onclick="exportShopICS()">Export .ics</button></div></div>
+    ${Object.entries(shop).sort(([a],[b])=>a==="Pantry Staples"?1:b==="Pantry Staples"?-1:a.localeCompare(b)).map(([cat,items])=>{
+      const visItems=hideChecked?items.filter(it=>!S.activeRun.chk[it.k]):items;
+      if(!visItems.length)return"";
+      return`<div class="scat"><div class="scat-t">${cat}</div>${visItems.sort((a,b)=>a.name.localeCompare(b.name)).map(it=>{const ck=!!S.activeRun.chk[it.k];const qs=it.hasQ?" \u2014 "+(Math.round(it.total*100)/100)+" "+it.unit:"";return`<div class="srow"><input type="checkbox" class="scb"${ck?" checked":""} onchange="toggleChk('${it.k.replace(/'/g,"\\'")}')"><span class="snm${ck?" done":""}">${it.name}</span><span class="sq">${qs}</span></div>`;}).join("")}</div>`;}).join("")}${archHtml}`;
+}
+
+function renderRunning(){
+  const rp=S.runPlan;
+  return`<div style="font-size:16px;font-weight:600;margin-bottom:12px">Running plan</div>
+    <div class="run-config">
+      <div class="run-field"><label>Race date</label><input type="date" value="${rp.raceDate}" onchange="setRP('raceDate',this.value)"></div>
+      <div class="run-field"><label>Distance</label><select onchange="setRP('distance',+this.value)"><option value="3.1"${rp.distance===3.1?" selected":""}>5K</option><option value="6.2"${rp.distance===6.2?" selected":""}>10K</option><option value="13.1"${rp.distance===13.1?" selected":""}>Half marathon</option><option value="26.2"${rp.distance===26.2?" selected":""}>Marathon</option></select></div>
+      <div class="run-field"><label>Goal (min)</label><input type="number" value="${rp.goalTime}" onchange="setRP('goalTime',+this.value)" style="width:65px"></div>
+      <div class="run-field"><label>Level</label><select onchange="setRP('level',this.value)"><option value="beginner"${rp.level==="beginner"?" selected":""}>Beginner</option><option value="intermediate"${rp.level==="intermediate"?" selected":""}>Intermediate</option><option value="advanced"${rp.level==="advanced"?" selected":""}>Advanced</option></select></div>
+      <div class="run-field" style="justify-content:flex-end"><button class="ba" onclick="genPlan()">Generate</button></div>
+    </div>
+    <div style="margin-bottom:14px;padding:10px;border:0.5px solid var(--border);border-radius:var(--rl);background:var(--bg2)">
+      <div class="lbl" style="margin-bottom:4px">Log a run</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:end">
+        <div class="run-field"><label>Date</label><input type="date" id="ar-date" value="${dkf(today)}"></div>
+        <div class="run-field"><label>Miles</label><input type="number" id="ar-dist" step="0.1" style="width:60px"></div>
+        <div class="run-field"><label>Pace</label><input type="text" id="ar-pace" placeholder="MM:SS" style="width:60px"></div>
+        <div class="run-field"><label>Notes</label><input type="text" id="ar-notes" style="width:100px"></div>
+        <button class="ba" onclick="logRun()">Log</button>
+      </div>
+    </div>
+    ${S.runDays.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="lbl" style="margin:0">${S.runDays.length} planned</span><button class="tb" onclick="batchRunICS()">Batch .ics</button></div>
+    <div style="font-size:9px;display:grid;grid-template-columns:60px 60px 50px 55px 45px 50px 55px auto 24px;gap:3px;color:var(--text3);font-weight:600;text-transform:uppercase;padding:3px 0;border-bottom:0.5px solid var(--border)"><span>Date</span><span>Type</span><span>Plan</span><span>Plan pace</span><span>Phase</span><span>Actual</span><span>Act pace</span><span></span><span></span></div>
+    ${S.runDays.slice(0,40).map((r,idx)=>{const a=S.actualRuns[r.date];const hd=a&&a.dist;
+      const distClr=hd?(a.dist>=r.dist?"color:var(--green-t)":"color:var(--coral-t)"):"color:var(--text3)";
+      const paceClr=hd&&a.pace?(a.pace<=r.pace?"color:var(--green-t)":"color:var(--coral-t)"):"color:var(--text3)";
+      return`<div style="display:grid;grid-template-columns:60px 60px 50px 55px 45px 50px 55px auto 24px;gap:3px;font-size:11px;padding:3px 0;border-bottom:0.5px solid var(--border);align-items:center">
+        <span style="color:var(--text3);font-size:10px">${fmtDate(r.date)}</span>
+        <span style="color:var(--teal-t);font-weight:500;font-size:10px">${r.type}</span>
+        <span>${r.dist}mi</span>
+        <span style="color:var(--text2)">${fmtPace(r.pace)}</span>
+        <span style="font-size:9px;color:var(--text3)">${r.phase}</span>
+        <span style="font-weight:500;${distClr}">${hd?a.dist+"mi":"\u2014"}</span>
+        <span style="${paceClr}">${hd&&a.pace?fmtPace(a.pace):"\u2014"}</span>
+        <span style="font-size:9px;color:var(--text2)">${a?.notes||""}</span>
+        <button style="font-size:8px;padding:1px 3px;border:0.5px solid var(--teal-t);border-radius:3px;background:var(--teal-bg);color:var(--teal-t);cursor:pointer" onclick="expRun(${idx})">ics</button>
+      </div>`;}).join("")}`:
+    `<div class="banner">Set race details and click Generate.</div>`}`;
+}
+
+function renderLearning(streak){
+  const todayK=dkf(today);const todayEntries=S.learnLog[todayK]||[];
+  const todayTotal=todayEntries.reduce((s,e)=>s+(e.hours||0),0);
+  const topics=S.learnTopics||[];
+  const recent=Object.entries(S.learnLog).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,20);
+  return`<div style="font-size:16px;font-weight:600;margin-bottom:12px">Learning tracker</div>
+    <div style="display:flex;gap:12px;margin-bottom:14px;align-items:center;flex-wrap:wrap"><span class="streak-badge">${streak} day streak</span>${todayTotal>0?`<span style="font-size:12px;color:var(--text2)">${Math.round(todayTotal*100)/100} hrs today</span>`:""}</div>
+
+    <div class="lbl">Log session</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
+      <input class="sinp" id="learn-date" type="date" value="${todayK}" style="width:140px;margin:0">
+      <div class="topic-select-wrap">
+        <select id="learn-topic-sel" onchange="onLearnTopicChange(this.value)">
+          <option value="">Select topic\u2026</option>
+          ${topics.map(t=>`<option value="${t.replace(/"/g,"&quot;")}">${t}</option>`).join("")}
+          <option value="__new__">+ New topic\u2026</option>
+        </select>
+      </div>
+      <input class="sinp" id="learn-topic-new" placeholder="New topic name" style="flex:1;min-width:100px;margin:0;display:none">
+      <input class="sinp" id="learn-hrs" type="number" step="0.25" placeholder="Hrs" style="width:55px;margin:0">
+      <input class="sinp" id="learn-notes" placeholder="Notes" style="flex:1;min-width:80px;margin:0">
+      <button class="ba" onclick="logLearn()">Log</button>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:12px">Tip: change the date to log sessions for past days.</div>
+
+    ${todayEntries.length?`<div class="lbl">Today's sessions</div>${todayEntries.map((e,i)=>`<div class="learn-item"><span style="flex:1"><strong>${e.topic}</strong>${e.notes?" \u2014 "+e.notes:""}</span><span style="font-size:10px;color:var(--text2)">${e.hours}h</span><span style="cursor:pointer;color:var(--text3);font-size:9px" onclick="rmLearn('${todayK}',${i})">\u2715</span></div>`).join("")}`:``}
+
+    <div class="lbl" style="margin-top:14px">Topics</div>
+    ${topics.length?topics.map((item,i)=>`<div class="learn-item"><span style="flex:1">${item}</span><span style="cursor:pointer;color:var(--text3);font-size:9px" onclick="delLT(${i})" title="Remove topic (existing logs remain)">\u2715</span></div>`).join(""):`<div style="font-size:11px;color:var(--text3);padding:4px 0">No topics yet. Add one below.</div>`}
+    <div style="display:flex;gap:4px;margin-top:6px"><input class="sinp" id="learn-topic-new-queue" placeholder="Add new topic..." style="margin:0;flex:1"><button class="tb" onclick="addLT()">Add</button></div>
+
+    <div class="lbl" style="margin-top:14px">Recent log</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Click a row to expand and edit individual sessions.</div>
+    ${recent.length?recent.map(([dk,entries])=>{
+      const total=entries.reduce((s,e)=>s+(e.hours||0),0);
+      const isExp=expandedLearnDate===dk;
+      return`<div class="ll-row" onclick="toggleLearnExp('${dk}')">
+        <span class="ll-date">${fmtDate(dk)}</span>
+        <span class="ll-topics">${entries.map(e=>e.topic).join(", ")}</span>
+        <span class="ll-hrs">${Math.round(total*100)/100}h</span>
+        <span class="ll-exp">${isExp?"\u25be":"\u25b8"}</span>
+      </div>${isExp?`<div class="ll-detail" onclick="event.stopPropagation()">
+        ${entries.map((e,i)=>`<div class="ll-detail-row">
+          <span class="ll-detail-topic">${e.topic}</span>
+          <span class="ll-detail-notes">${e.notes||""}</span>
+          <span class="ll-detail-hrs">${e.hours}h</span>
+          <span class="ll-detail-rm" onclick="rmLearn('${dk}',${i})" title="Remove">\u2715</span>
+        </div>`).join("")}
+        <div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">
+          <button class="tb" style="font-size:10px" onclick="EDITDAY('${dk}')">Open day editor</button>
+        </div>
+      </div>`:""}`;
+    }).join(""):`<div style="font-size:11px;color:var(--text3);padding:4px 0">No learning logged yet.</div>`}`;
+}
+
+function renderPulse(stats,streak){
+  const d=new Date(today),dow=d.getDay(),monOff=dow===0?-6:1-dow;
+  const mon=new Date(d);mon.setDate(d.getDate()+monOff);
+  let wC=0,wE=0,wPMi=0,wAMi=0,wLH=0;
+  for(let i=0;i<7;i++){const wd=new Date(mon);wd.setDate(mon.getDate()+i);const k=dkf(wd);
+    const dm=S.meals[k];if(dm)SLOTS.forEach(sl=>(dm[sl]||[]).forEach(e=>{if(e.type==="cook")wC++;if(e.type==="eatout")wE++;}));
+    S.runDays.filter(r=>r.date===k).forEach(r=>wPMi+=r.dist);
+    if(S.actualRuns[k])wAMi+=(S.actualRuns[k].dist||0);
+    if(S.learnLog[k])(S.learnLog[k]).forEach(e=>wLH+=(e.hours||0));
+  }
+
+  // ────────── 30-day analytics ──────────
+  // Build a 30-day window ending today
+  const days30=[];
+  for(let i=29;i>=0;i--){const dt=new Date(today);dt.setDate(today.getDate()-i);days30.push(dkf(dt));}
+
+  // Top learning topics (by total hours, all-time)
+  const topicHrs={};
+  Object.values(S.learnLog).forEach(entries=>{if(Array.isArray(entries))entries.forEach(e=>{if(!e.topic)return;topicHrs[e.topic]=(topicHrs[e.topic]||0)+(e.hours||0);});});
+  const topTopics=Object.entries(topicHrs).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const topTopicMax=topTopics.length?topTopics[0][1]:1;
+
+  // Top cooked recipes (all-time)
+  const cookCount={};
+  Object.values(S.meals).forEach(slots=>{SLOTS.forEach(sl=>(slots[sl]||[]).forEach(e=>{if(e.type==="cook"&&e.id)cookCount[e.id]=(cookCount[e.id]||0)+1;}));});
+  const topCooked=Object.entries(cookCount).map(([id,c])=>({id,c,name:R.find(x=>x.id===id)?.name||id})).sort((a,b)=>b.c-a.c).slice(0,6);
+  const topCookMax=topCooked.length?topCooked[0].c:1;
+
+  // Cuisine breakdown (all-time)
+  const cuisineCount={};
+  Object.values(S.meals).forEach(slots=>{SLOTS.forEach(sl=>(slots[sl]||[]).forEach(e=>{if(e.type==="cook"&&e.id){const r=R.find(x=>x.id===e.id);if(r){r.cu.forEach(c=>cuisineCount[c]=(cuisineCount[c]||0)+1);}}}));});
+  const cuisines=Object.entries(cuisineCount).sort((a,b)=>b[1]-a[1]);
+  const cuisineMax=cuisines.length?cuisines[0][1]:1;
+
+  // 30-day learning heatmap (hours per day)
+  const heatmap30=days30.map(dk=>{const entries=S.learnLog[dk]||[];return entries.reduce((s,e)=>s+(e.hours||0),0);});
+
+  // 30-day running summary
+  let run30Mi=0,run30Count=0,run30PaceSum=0,run30PaceCount=0;
+  days30.forEach(dk=>{const a=S.actualRuns[dk];if(a&&a.dist){run30Mi+=a.dist;run30Count++;if(a.pace){run30PaceSum+=a.pace;run30PaceCount++;}}});
+  const run30AvgPace=run30PaceCount?run30PaceSum/run30PaceCount:0;
+
+  // 12-week cooking trend (weeks ending last 12 Sundays up to this week)
+  const weeks12=[];
+  for(let w=11;w>=0;w--){
+    const ws=new Date(mon);ws.setDate(mon.getDate()-w*7);
+    let c=0;
+    for(let i=0;i<7;i++){const wd=new Date(ws);wd.setDate(ws.getDate()+i);const k=dkf(wd);
+      const dm=S.meals[k];if(dm)SLOTS.forEach(sl=>(dm[sl]||[]).forEach(e=>{if(e.type==="cook")c++;}));
+    }
+    weeks12.push(c);
+  }
+  const weeks12Max=Math.max(1,...weeks12);
+
+  // 12-week learning hours trend
+  const learnWeeks12=[];
+  for(let w=11;w>=0;w--){
+    const ws=new Date(mon);ws.setDate(mon.getDate()-w*7);
+    let h=0;
+    for(let i=0;i<7;i++){const wd=new Date(ws);wd.setDate(ws.getDate()+i);const k=dkf(wd);
+      if(S.learnLog[k])(S.learnLog[k]).forEach(e=>h+=(e.hours||0));
+    }
+    learnWeeks12.push(Math.round(h*10)/10);
+  }
+  const learnWeeks12Max=Math.max(1,...learnWeeks12);
+
+  // Heatmap bucketing for learning hours: 0, 0-1, 1-2, 2-3, 3+
+  function heatLevel(h){if(h<=0)return"";if(h<1)return"l1";if(h<2)return"l2";if(h<3)return"l3";return"l4";}
+
+  // Days active (last 30): meals cooked, workouts logged, learning logged
+  let activeMealDays=0,activeRunDays=0,activeLearnDays=0;
+  days30.forEach(dk=>{
+    const slots=S.meals[dk];if(slots&&SLOTS.some(sl=>(slots[sl]||[]).some(e=>e.type==="cook")))activeMealDays++;
+    if(S.actualRuns[dk]&&S.actualRuns[dk].dist)activeRunDays++;
+    if(S.learnLog[dk]&&S.learnLog[dk].length)activeLearnDays++;
+  });
+
+  return`<div style="font-size:16px;font-weight:600;margin-bottom:12px">Pulse</div>
+
+    <div class="lbl">This week \u00b7 ${fmtDate(dkf(mon))} \u2013 ${fmtDate(dkf(new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6)))}</div>
+    <div class="pulse">
+      <div class="pulse-card"><div class="pulse-val">${wC}</div><div class="pulse-label">Cooked</div></div>
+      <div class="pulse-card"><div class="pulse-val">${wE}</div><div class="pulse-label">Ate out</div></div>
+      <div class="pulse-card"><div class="pulse-val">${Math.round(wAMi*10)/10}<span style="font-size:12px;color:var(--text3)"> / ${Math.round(wPMi*10)/10}</span></div><div class="pulse-label">Miles (act/plan)</div></div>
+      <div class="pulse-card"><div class="pulse-val">${Math.round(wLH*100)/100}</div><div class="pulse-label">Learn hrs</div></div>
+      <div class="pulse-card"><div class="pulse-val">${streak}</div><div class="pulse-label">Streak</div></div>
+    </div>
+
+    <div class="lbl" style="margin-top:14px">Monthly (${MOS[vM]} ${vY})</div>
+    <div class="pulse">
+      <div class="pulse-card"><div class="pulse-val">${stats.cook}</div><div class="pulse-label">Cooked</div></div>
+      <div class="pulse-card"><div class="pulse-val">${stats.eatout}</div><div class="pulse-label">Ate out</div></div>
+      <div class="pulse-card"><div class="pulse-val">${stats.aMi}<span style="font-size:12px;color:var(--text3)"> / ${stats.pMi}</span></div><div class="pulse-label">Miles (act/plan)</div></div>
+      <div class="pulse-card"><div class="pulse-val">${stats.lHrs}</div><div class="pulse-label">Learn hrs</div></div>
+    </div>
+
+    <div class="an-section" style="margin-top:22px">
+      <div class="an-hdr">Last 30 days</div>
+      <div class="pulse">
+        <div class="pulse-card"><div class="pulse-val">${activeMealDays}<span style="font-size:12px;color:var(--text3)">/30</span></div><div class="pulse-label">Cook days</div></div>
+        <div class="pulse-card"><div class="pulse-val">${activeRunDays}<span style="font-size:12px;color:var(--text3)">/30</span></div><div class="pulse-label">Run days</div></div>
+        <div class="pulse-card"><div class="pulse-val">${activeLearnDays}<span style="font-size:12px;color:var(--text3)">/30</span></div><div class="pulse-label">Learn days</div></div>
+        <div class="pulse-card"><div class="pulse-val">${Math.round(run30Mi*10)/10}</div><div class="pulse-label">Miles (30d)</div></div>
+        <div class="pulse-card"><div class="pulse-val">${run30AvgPace?fmtPace(run30AvgPace):"\u2014"}</div><div class="pulse-label">Avg pace (30d)</div></div>
+      </div>
+    </div>
+
+    <div class="an-section">
+      <div class="an-hdr">Learning heatmap \u00b7 last 30 days</div>
+      <div class="an-grid" style="grid-template-columns:repeat(${Math.min(15,days30.length)},1fr);gap:3px">
+        ${heatmap30.map((h,i)=>`<div class="an-cell ${heatLevel(h)}" title="${days30[i]}: ${Math.round(h*100)/100}h"></div>`).join("")}
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:9px;color:var(--text3)">
+        <span>Less</span>
+        <span class="an-cell" style="width:10px;height:10px"></span>
+        <span class="an-cell l1" style="width:10px;height:10px"></span>
+        <span class="an-cell l2" style="width:10px;height:10px"></span>
+        <span class="an-cell l3" style="width:10px;height:10px"></span>
+        <span class="an-cell l4" style="width:10px;height:10px"></span>
+        <span>More</span>
+      </div>
+    </div>
+
+    ${topTopics.length?`<div class="an-section">
+      <div class="an-hdr">Top learning topics \u00b7 all time</div>
+      ${topTopics.map(([t,h])=>{const pct=Math.round((h/topTopicMax)*100);return`<div class="an-row"><span class="an-row-lbl">${t}</span><div class="an-bar-wrap"><div class="an-bar" style="width:${pct}%;background:var(--purple-t)"></div></div><span class="an-row-val">${Math.round(h*10)/10}h</span></div>`;}).join("")}
+    </div>`:""}
+
+    ${topCooked.length?`<div class="an-section">
+      <div class="an-hdr">Top cooked recipes</div>
+      ${topCooked.map(r=>{const pct=Math.round((r.c/topCookMax)*100);return`<div class="an-row"><span class="an-row-lbl">${r.name}</span><div class="an-bar-wrap"><div class="an-bar" style="width:${pct}%;background:var(--blue)"></div></div><span class="an-row-val">${r.c}\u00d7</span></div>`;}).join("")}
+    </div>`:""}
+
+    ${cuisines.length?`<div class="an-section">
+      <div class="an-hdr">Cuisine mix</div>
+      ${cuisines.map(([c,n])=>{const pct=Math.round((n/cuisineMax)*100);const col=CCOL[c]||{bg:"var(--bg4)",c:"var(--text2)"};return`<div class="an-row"><span class="an-row-lbl"><span class="tag" style="background:${col.bg};color:${col.c};font-size:9px">${c}</span></span><div class="an-bar-wrap"><div class="an-bar" style="width:${pct}%;background:${col.c}"></div></div><span class="an-row-val">${n}\u00d7</span></div>`;}).join("")}
+    </div>`:""}
+
+    <div class="an-section">
+      <div class="an-hdr">Weekly cook count \u00b7 last 12 weeks</div>
+      <div class="an-spark">${weeks12.map((c,i)=>`<div class="an-spark-bar${c===0?" miss":""}" style="height:${Math.max(2,Math.round((c/weeks12Max)*100))}%" title="Week ${i-11===0?'(this week)':(i-11)}: ${c} cooked"></div>`).join("")}</div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>12 wks ago</span><span>This week</span></div>
+    </div>
+
+    <div class="an-section">
+      <div class="an-hdr">Weekly learning hours \u00b7 last 12 weeks</div>
+      <div class="an-spark">${learnWeeks12.map((h,i)=>`<div class="an-spark-bar${h===0?" miss":""}" style="height:${Math.max(2,Math.round((h/learnWeeks12Max)*100))}%;background:var(--purple-t)" title="Week ${i-11===0?'(this week)':(i-11)}: ${h}h"></div>`).join("")}</div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>12 wks ago</span><span>This week</span></div>
+    </div>
+  `;
+}
+
+function renderFinances(){
+  const LINKS=[
+    {label:"Budget",desc:"Monthly budget dashboard",url:"https://1drv.ms/x/c/826a97dfb8b70e0d/IQARR_xPogIxRaGZF3vwPmvrAU4by33NdsBPjAjTuQ0vyp0?e=aH3H0q",color:"var(--green)",glow:"var(--glow-green)"},
+    {label:"Net Worth",desc:"Net worth tracker",url:"https://1drv.ms/x/c/826a97dfb8b70e0d/IQA79-zHZSwrTLesU8xhyznbAcm1EwoiAA2wXS4r55AEgV4?e=pYtX1d",color:"var(--blue)",glow:"var(--glow-cyan)"}
+  ];
+  return`<div style="max-width:520px">
+    <div style="font-size:17px;font-weight:600;margin-bottom:6px;color:var(--yellow)">Finances</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:20px;letter-spacing:.02em">External dashboards — open in a new tab.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${LINKS.map(l=>`
+        <a href="${l.url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid ${l.color};border-left:3px solid ${l.color};border-radius:var(--r);background:var(--bg2);text-decoration:none;transition:all .15s;cursor:pointer" onmouseover="this.style.boxShadow='${l.glow}';this.style.background='var(--bg3)'" onmouseout="this.style.boxShadow='';this.style.background='var(--bg2)'">
+          <span style="font-size:22px;color:${l.color};font-weight:700;min-width:28px;text-align:center">$</span>
+          <span style="flex:1">
+            <span style="display:block;font-size:15px;font-weight:600;color:var(--text)">${l.label}</span>
+            <span style="font-size:11px;color:var(--text3);margin-top:2px;display:block">${l.desc}</span>
+          </span>
+          <span style="font-size:13px;color:${l.color};opacity:.8">↗</span>
+        </a>`).join("")}
+    </div>
+  </div>`;
+}
+
+// ─── Event edit modal ───
+function renderEventEditModal(){
+  const ev=S.events[eventEditDk]?.[eventEditIdx];
+  if(!ev)return'';
+  const safeTitle=(ev.title||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const safeNotes=(ev.notes||'').replace(/</g,'&lt;');
+  return`<div class="ov" onclick="closeEventEdit()">
+    <div class="mdl" onclick="event.stopPropagation()" style="max-width:400px">
+      <div class="mdl-t">✎ Event — ${fmtDate(eventEditDk)}</div>
+      <div class="lbl" style="margin-top:8px">Name</div>
+      <input class="sinp" id="ee-title" value="${safeTitle}" placeholder="Event name" style="font-size:14px">
+      <div class="lbl">Time <span style="font-weight:400;color:var(--text3)">(optional)</span></div>
+      <input class="sinp" id="ee-time" type="time" value="${ev.time||''}">
+      <div class="lbl">Category <span style="font-weight:400;color:var(--text3)">(optional)</span></div>
+      <select class="sinp" id="ee-cat">
+        <option value="">(no category)</option>
+        ${(S.eventCategories||[]).map(c=>`<option value="${c.replace(/"/g,'&quot;')}"${ev.category===c?' selected':''}>${c}</option>`).join("")}
+      </select>
+      <div class="lbl">Notes <span style="font-weight:400;color:var(--text3)">(optional)</span></div>
+      <textarea class="sinp" id="ee-notes" rows="3" style="resize:vertical;line-height:1.5">${safeNotes}</textarea>
+      <div class="mft">
+        <button class="bc" onclick="deleteEventFromEdit()" style="color:var(--coral-t);border-color:var(--coral-t);margin-right:auto">Delete</button>
+        <button class="bc" onclick="closeEventEdit()">Cancel</button>
+        <button class="ba" onclick="saveEventEdit()">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
+window.openEventEdit=(dk,idx)=>{if(idx<0)return;eventEditModal=true;eventEditDk=dk;eventEditIdx=idx;render();};
+window.closeEventEdit=()=>{eventEditModal=false;render();};
+window.saveEventEdit=()=>{
+  const ev=S.events[eventEditDk]?.[eventEditIdx];if(!ev)return;
+  const t=document.getElementById('ee-title')?.value?.trim();
+  if(!t)return;
+  const tm=document.getElementById('ee-time')?.value;
+  const n=document.getElementById('ee-notes')?.value?.trim();
+  const cat=document.getElementById('ee-cat')?.value;
+  ev.title=t;
+  if(tm)ev.time=tm;else delete ev.time;
+  if(n)ev.notes=n;else delete ev.notes;
+  if(cat)ev.category=cat;else delete ev.category;
+  save();eventEditModal=false;render();
+};
+window.deleteEventFromEdit=()=>{
+  if(!S.events[eventEditDk])return;
+  S.events[eventEditDk].splice(eventEditIdx,1);
+  if(!S.events[eventEditDk].length)delete S.events[eventEditDk];
+  save();eventEditModal=false;render();
+};
+
+// ─── Trips ───
+window.addTrip=()=>{
+  const name=document.getElementById('trip-name')?.value?.trim();
+  const start=document.getElementById('trip-start')?.value;
+  const end=document.getElementById('trip-end')?.value;
+  if(!name||!start||!end||start>end){alert('Please fill in a name, start, and end date (start must be before end).');return;}
+  if(!S.trips)S.trips=[];
+  S.trips.push({id:genId('tr'),name,start,end});
+  save();render();
+};
+window.rmTrip=id=>{
+  if(!S.trips)return;
+  S.trips=S.trips.filter(t=>t.id!==id);
+  save();render();
+};
+
+function renderSettings(){
+  const goals=getGoals(vY,vM);
+  const panel=(accentColor,content)=>`<div style="background:var(--bg2);border:1px solid var(--border);border-top:2px solid ${accentColor};border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:0">${content}</div>`;
+  return`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start">
+
+    ${panel('var(--blue)',`
+      <div class="lbl" style="margin-bottom:6px">Monthly goals · ${MOS[vM]} ${vY}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Navigate the calendar to change month.</div>
+      ${goals.map((g,i)=>`<div style="display:flex;gap:4px;align-items:center;padding:3px 0"><input class="sinp" style="margin:0;flex:2;font-size:12px" value="${g.label}" onchange="updGoal(${i},'label',this.value)"><input class="sinp" type="number" style="margin:0;width:52px;font-size:12px" value="${g.target}" onchange="updGoal(${i},'target',+this.value)"><input class="sinp" style="margin:0;width:36px;font-size:12px" value="${g.unit}" onchange="updGoal(${i},'unit',this.value)"></div>`).join("")}
+    `)}
+
+    ${panel('var(--amber-t)',`
+      <div class="lbl" style="margin-bottom:8px">Recurring eat-out days</div>
+      <div class="rec-days" style="margin-bottom:14px">${DWS.map((d,i)=>`<button class="rec-day${S.recurringEatout.includes(i)?" on":""}" onclick="toggleRec(${i})">${d.charAt(0)}</button>`).join("")}</div>
+      <div class="lbl" style="margin-bottom:8px">Quick meal library</div>
+      <div style="max-height:180px;overflow-y:auto">
+        ${S.quickMeals.map((m,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="flex:1">${m}</span><span style="cursor:pointer;color:var(--coral-t);font-size:11px" onclick="delQM(${i})">remove</span></div>`).join("")}
+      </div>
+      <div style="display:flex;gap:4px;margin-top:8px"><input class="sinp" id="newqm" style="margin:0;flex:1" placeholder="New quick meal..."><button class="tb" onclick="addQMI()">Add</button></div>
+    `)}
+
+    ${panel('var(--green-t)',`
+      <div class="lbl" style="margin-bottom:8px">Import calendar (.ics)</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.7">Export from Outlook: <span style="color:var(--text2)">File → Save Calendar</span> or right-click a calendar → Export. Supports single + recurring events.</div>
+      <input type="file" id="ics-file-input" accept=".ics,text/calendar" style="display:none" onchange="handleICSFile(this)">
+      <button class="tb" onclick="triggerICSImport()" style="font-size:13px;padding:6px 14px;color:var(--blue);border-color:var(--blue)">↑ Import .ics file</button>
+      ${icsImportResult?`<div style="margin-top:12px;padding:10px 12px;border:1px solid ${icsImportResult.added>0?'var(--green-t)':'var(--border2)'};border-left:3px solid ${icsImportResult.added>0?'var(--green-t)':'var(--text3)'};border-radius:var(--r);background:var(--bg3)">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">${icsImportResult.file}</div>
+        <div style="font-size:13px"><span style="color:var(--green-t);font-weight:600">${icsImportResult.added} event${icsImportResult.added!==1?'s':''} added</span>${icsImportResult.recurring>0?`<span style="color:var(--text3)"> (incl. ${icsImportResult.recurring} recurring)</span>`:''}${icsImportResult.skipped>0?` · <span style="color:var(--text3)">${icsImportResult.skipped} skipped</span>`:''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${icsImportResult.total} total parsed</div>
+        <span style="font-size:11px;color:var(--text3);cursor:pointer;margin-top:6px;display:inline-block;text-decoration:underline" onclick="clearIcsResult()">dismiss</span>
+      </div>`:''}
+    `)}
+
+    ${panel('var(--purple-t)',`
+      <div class="lbl" style="margin-bottom:8px;color:var(--purple-t)">Event categories</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">User-defined. Each category gets a unique colour on event chips. Used for analysis.</div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px">
+        ${(S.eventCategories||[]).length?
+          (S.eventCategories||[]).map((c,i)=>{const col=CAT_PALETTE[i%CAT_PALETTE.length];return`<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid var(--border);border-left:3px solid ${col};border-radius:var(--r);background:var(--bg3);font-size:13px"><span style="flex:1">${c}</span><span style="font-size:10px;cursor:pointer;color:var(--text3)" onmouseover="this.style.color='var(--coral-t)'" onmouseout="this.style.color='var(--text3)'" onclick="removeEventCategory('${c.replace(/'/g,"\\'")}')">remove</span></div>`;}).join("")
+          :`<div style="font-size:11px;color:var(--text3);padding:4px 0">No categories yet.</div>`}
+      </div>
+      <div style="display:flex;gap:4px"><input class="sinp" id="newcat" style="margin:0;flex:1;font-size:12px" placeholder="e.g. Social, Concert, Health..."><button class="tb" onclick="addEventCategory()" style="color:var(--purple-t);border-color:var(--purple-t)">Add</button></div>
+    `)}
+
+    <div style="grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:var(--r);padding:16px 18px">
+      <div class="lbl" style="margin-bottom:6px">Trips</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Mark a date range as a trip — appears as a colour band on the calendar so you can see when you're away.</div>
+      ${(S.trips||[]).length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:12px">${(S.trips||[]).map((t,i)=>{const col=TRIP_COLORS[i%TRIP_COLORS.length];return`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-left:3px solid ${col};border-radius:var(--r);background:var(--bg3);font-size:13px"><span style="color:${col};font-size:11px">✈</span><span style="flex:1;font-weight:500">${t.name}</span><span style="font-size:11px;color:var(--text3);white-space:nowrap">${fmtDate(t.start)} → ${fmtDate(t.end)}</span><span style="cursor:pointer;color:var(--coral-t);font-size:12px;padding:0 4px" onclick="rmTrip('${t.id}')" title="Remove">✕</span></div>`;}).join("")}</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input class="sinp" id="trip-name" placeholder="Trip name (e.g. NYC Trip)" style="flex:2;min-width:140px;margin:0">
+        <input class="sinp" type="date" id="trip-start" style="flex:1;min-width:120px;margin:0">
+        <span style="color:var(--text3);font-size:12px">to</span>
+        <input class="sinp" type="date" id="trip-end" style="flex:1;min-width:120px;margin:0">
+        <button class="tb" onclick="addTrip()" style="color:var(--yellow);border-color:var(--yellow)">Add trip</button>
+      </div>
+    </div>
+
+    <div style="grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--blue);border-radius:var(--r);padding:16px 18px">
+      <div class="lbl" style="margin-bottom:6px">Pantry profile</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Staples are excluded from shopping list match scoring but shown as "Pantry Staples" on your list.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1px;max-height:220px;overflow-y:auto;margin-bottom:10px">
+        ${S.pantryProfile.sort().map((item,i)=>`<div class="pantry-item"><button class="pantry-toggle on" onclick="rmPantry(${i})"></button><span style="font-size:12px">${item}</span></div>`).join("")}
+      </div>
+      <div style="display:flex;gap:4px"><input class="sinp" id="newpantry" style="margin:0;flex:1" placeholder="Add staple..."><button class="tb" onclick="addPantry()">Add</button></div>
+    </div>
+
+    <div style="grid-column:1/-1;display:flex;justify-content:flex-end;padding:2px 0">
+      <button class="dbtn" onclick="if(confirm('Reset everything?')){localStorage.removeItem('${SK}');S=defaults();sv();}">Reset all data</button>
+    </div>
+
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// HOME / CHORES MODULE
+// ═══════════════════════════════════════
+function choreIsDone(id,cadence){
+  const last=(S.choreLog||{})[id];
+  if(!last)return false;
+  const lastD=parsedk(last);
+  if(cadence==="daily")return last===dkf(today);
+  if(cadence==="weekly"){
+    const dow=today.getDay();
+    const weekStart=new Date(today);weekStart.setDate(today.getDate()-dow);weekStart.setHours(0,0,0,0);
+    return lastD>=weekStart;
+  }
+  if(cadence==="monthly")return lastD.getFullYear()===today.getFullYear()&&lastD.getMonth()===today.getMonth();
+  if(cadence==="quarterly"){const diff=Math.floor((today-lastD)/864e5);return diff<=90;}
+  return false;
+}
+window.toggleChore=(id,cadence)=>{
+  if(!S.choreLog)S.choreLog={};
+  if(choreIsDone(id,cadence)){delete S.choreLog[id];}
+  else{S.choreLog[id]=dkf(today);}
+  sv();
+};
+window.addChore=(cadence)=>{
+  const inp=document.getElementById("new-chore-"+cadence);
+  if(!inp||!inp.value.trim())return;
+  const label=inp.value.trim();
+  const id="ch_"+cadence[0]+Date.now().toString(36);
+  if(!S.choreItems)S.choreItems={daily:[],weekly:[],monthly:[],quarterly:[]};
+  (S.choreItems[cadence]||(S.choreItems[cadence]=[])).push({id,label});
+  inp.value="";
+  sv();
+};
+window.removeChore=(id,cadence)=>{
+  if(!S.choreItems)return;
+  S.choreItems[cadence]=(S.choreItems[cadence]||[]).filter(c=>c.id!==id);
+  if(S.choreLog)delete S.choreLog[id];
+  sv();
+};
+function renderHome(){
+  const templates=S.choreTemplates||[];
+  return`<div style="max-width:760px">
+    <div style="font-size:17px;font-weight:600;margin-bottom:4px;color:var(--yellow)">Home</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:20px">Recurring chore templates — shown as chips on the calendar. Drag a chip to a different day to reschedule that one occurrence without changing the template.</div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:var(--r);padding:16px 18px">
+      <div class="lbl" style="margin-bottom:10px;color:var(--yellow)">Chore templates</div>
+      ${templates.length?`
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px">
+          ${templates.map(t=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:var(--r);background:var(--bg3);font-size:13px">
+              <span style="flex:1;font-weight:500">${t.name}</span>
+              <span style="font-size:11px;color:var(--text3);white-space:nowrap">every ${DWS[t.dow]}</span>
+              <span style="cursor:pointer;color:var(--text3);font-size:11px;padding:2px 6px;border:1px solid transparent;border-radius:var(--r)" onmouseover="this.style.color='var(--coral-t)';this.style.borderColor='var(--coral-t)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='transparent'" onclick="removeChoreTemplate('${t.id}')">remove</span>
+            </div>
+          `).join("")}
+        </div>
+      `:`<div style="font-size:12px;color:var(--text3);margin-bottom:16px;padding:10px;border:1px dashed var(--border2);border-radius:var(--r);text-align:center">No chore templates yet — add one below to see chores on your calendar.</div>`}
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input class="sinp" id="ct-name" style="flex:2;min-width:160px;margin:0" placeholder="Chore name (e.g. Clean bathroom)">
+        <select class="sinp" id="ct-dow" style="flex:1;min-width:120px;margin:0">
+          ${DWS.map((d,i)=>`<option value="${i}">${d}</option>`).join("")}
+        </select>
+        <button class="tb" onclick="addChoreTemplate()" style="color:var(--yellow);border-color:var(--yellow)">Add template</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// v0.8: PEOPLE MODULE
+// ═══════════════════════════════════════
+const TIERS=[
+  {k:"family",l:"Family",cls:"tier-family"},
+  {k:"close",l:"Close friend",cls:"tier-close"},
+  {k:"friend",l:"Friend",cls:"tier-friend"},
+  {k:"pro",l:"Professional",cls:"tier-pro"},
+  {k:"acq",l:"Acquaintance",cls:"tier-acq"}
+];
+function tierInfo(k){return TIERS.find(t=>t.k===k);}
+function personInitials(name){
+  if(!name)return"?";
+  const parts=name.trim().split(/\s+/);
+  if(parts.length===1)return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
+}
+// Last interaction date for a person, or null
+function lastContactDate(personId){
+  let latest=null;
+  Object.entries(S.interactions||{}).forEach(([dk,list])=>{
+    if(!Array.isArray(list))return;
+    list.forEach(iv=>{if((iv.personIds||[]).includes(personId)){if(!latest||dk>latest)latest=dk;}});
+  });
+  return latest;
+}
+function daysSinceStr(dk){
+  if(!dk)return"never";
+  const d=parsedk(dk);
+  const diff=Math.floor((today-d)/864e5);
+  if(diff===0)return"today";
+  if(diff===1)return"1 day ago";
+  return diff+" days ago";
+}
+function cadenceStatus(person){
+  if(!person.cadenceDays)return null; // no cadence set
+  const last=lastContactDate(person.id);
+  if(!last)return{status:"never",days:null};
+  const d=parsedk(last);
+  const diff=Math.floor((today-d)/864e5);
+  if(diff<=person.cadenceDays)return{status:"on-track",days:diff};
+  if(diff<=person.cadenceDays*2)return{status:"due",days:diff};
+  return{status:"overdue",days:diff};
+}
+function interactionsFor(personId){
+  const result=[];
+  Object.entries(S.interactions||{}).forEach(([dk,list])=>{
+    if(!Array.isArray(list))return;
+    list.forEach(iv=>{if((iv.personIds||[]).includes(personId))result.push({...iv,date:dk});});
+  });
+  result.sort((a,b)=>b.date.localeCompare(a.date));
+  return result;
+}
+function genId(prefix){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,6);}
+
+function renderPeople(){
+  const viewer=peopleView;
+  if(viewer==="edit")return renderPersonEdit();
+  if(viewer==="detail"&&selectedPersonId)return renderPersonDetail();
+  return renderPeopleList();
+}
+
+function renderPeopleList(){
+  const peopleArr=Object.values(S.people||{});
+  const q=(peopleSearch||"").toLowerCase();
+  const filtered=peopleArr.filter(p=>{
+    if(peopleFilter!=="all"&&p.tier!==peopleFilter)return false;
+    if(q&&!p.name.toLowerCase().includes(q))return false;
+    return true;
+  });
+  // Sort: overdue first, then due, then by last-contact ascending (oldest first), then alpha
+  filtered.sort((a,b)=>{
+    const ca=cadenceStatus(a),cb=cadenceStatus(b);
+    const rank=s=>s?{overdue:0,due:1,"on-track":2,never:3}[s.status]??4:4;
+    const r=rank(ca)-rank(cb);
+    if(r!==0)return r;
+    const la=lastContactDate(a.id),lb=lastContactDate(b.id);
+    if(la&&lb)return la.localeCompare(lb);
+    if(!la&&lb)return 1;
+    if(la&&!lb)return -1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const tierCounts={};
+  peopleArr.forEach(p=>{if(p.tier)tierCounts[p.tier]=(tierCounts[p.tier]||0)+1;});
+
+  return`<div class="ppl-hdr">
+    <span class="ppl-title">People</span>
+    <button class="ba" onclick="openPersonEdit(null)">+ New person</button>
+    <button class="tb" onclick="openLogInteraction()">+ Log interaction</button>
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+    <input class="sinp" placeholder="Search people..." value="${(peopleSearch||"").replace(/"/g,"&quot;")}" oninput="setPeopleSearch(this.value)" style="flex:1;min-width:160px;margin:0">
+  </div>
+  <div class="ppl-filter-bar">
+    <button class="fb${peopleFilter==="all"?" on":""}" onclick="setPeopleFilter('all')">All (${peopleArr.length})</button>
+    ${TIERS.map(t=>`<button class="fb${peopleFilter===t.k?" on":""}" onclick="setPeopleFilter('${t.k}')">${t.l}${tierCounts[t.k]?" ("+tierCounts[t.k]+")":""}</button>`).join("")}
+  </div>
+  ${filtered.length===0?`<div class="ppl-empty">${peopleArr.length===0?"No people yet. Click \u201c+ New person\u201d to start.":"No people match your filter."}</div>`:filtered.map(p=>{
+    const last=lastContactDate(p.id);
+    const cad=cadenceStatus(p);
+    const sinceCls=cad?cad.status:"";
+    const sinceTxt=last?daysSinceStr(last):"never logged";
+    const tier=tierInfo(p.tier);
+    return`<div class="ppl-row" onclick="openPersonDetail('${p.id}')">
+      <div class="ppl-avatar">${personInitials(p.name)}</div>
+      <div class="ppl-info">
+        <div class="ppl-name">${p.name}</div>
+        <div class="ppl-meta">
+          ${tier?`<span class="tier-badge ${tier.cls}">${tier.l}</span>`:""}
+          ${p.cadenceDays?`<span style="color:var(--text3)">every ${p.cadenceDays}d</span>`:""}
+        </div>
+      </div>
+      <div class="ppl-since ${sinceCls}">${sinceTxt}</div>
+      <div style="color:var(--text3);font-size:14px">\u203a</div>
+    </div>`;
+  }).join("")}`;
+}
+
+function renderPersonDetail(){
+  const p=S.people[selectedPersonId];
+  if(!p)return`<div class="ppl-empty">Person not found.</div>`;
+  const ixs=interactionsFor(p.id);
+  const last=lastContactDate(p.id);
+  const cad=cadenceStatus(p);
+  const tier=tierInfo(p.tier);
+  // Stats
+  const totalIx=ixs.length;
+  const ix30=ixs.filter(i=>{const d=parsedk(i.date);return (today-d)/864e5<=30;}).length;
+  const ix90=ixs.filter(i=>{const d=parsedk(i.date);return (today-d)/864e5<=90;}).length;
+
+  return`<div style="display:flex;gap:6px;margin-bottom:12px">
+    <button class="tb" onclick="backToPeopleList()">\u2039 Back</button>
+    <button class="tb" onclick="openPersonEdit('${p.id}')">Edit</button>
+    <button class="tb" onclick="openLogInteractionFor('${p.id}')">+ Log interaction</button>
+  </div>
+  <div class="ppl-detail-hdr">
+    <div class="ppl-detail-avatar">${personInitials(p.name)}</div>
+    <div>
+      <div class="ppl-detail-name">${p.name}</div>
+      <div class="ppl-detail-sub">
+        ${tier?`<span class="tier-badge ${tier.cls}">${tier.l}</span>`:""}
+        ${p.birthday?`<span>\ud83c\udf82 ${fmtBirthday(p.birthday)}</span>`:""}
+        ${p.cadenceDays?`<span>cadence: every ${p.cadenceDays} days</span>`:""}
+      </div>
+    </div>
+  </div>
+  ${p.notes?`<div style="padding:8px 10px;background:var(--bg2);border-radius:var(--r);margin-bottom:14px;font-size:12px;color:var(--text2);white-space:pre-wrap">${p.notes}</div>`:""}
+  <div class="ppl-detail-stats">
+    <div class="ppl-stat"><div class="ppl-stat-val">${totalIx}</div><div class="ppl-stat-label">Total interactions</div></div>
+    <div class="ppl-stat"><div class="ppl-stat-val">${ix30}</div><div class="ppl-stat-label">Last 30 days</div></div>
+    <div class="ppl-stat"><div class="ppl-stat-val">${ix90}</div><div class="ppl-stat-label">Last 90 days</div></div>
+    <div class="ppl-stat"><div class="ppl-stat-val" style="font-size:13px">${last?fmtDate(last):"never"}</div><div class="ppl-stat-label">Last contact</div></div>
+    ${cad?`<div class="ppl-stat"><div class="ppl-stat-val" style="font-size:13px;color:${cad.status==='overdue'?'#A32D2D':cad.status==='due'?'#C66E00':'var(--green-t)'}">${cad.status==="never"?"never":cad.status}</div><div class="ppl-stat-label">Cadence status</div></div>`:""}
+  </div>
+  <div class="lbl">Interaction history</div>
+  ${ixs.length===0?`<div style="font-size:11px;color:var(--text3);padding:8px 0">No interactions logged yet.</div>`:ixs.map(iv=>`<div class="ix-row">
+    <span class="ix-date">${fmtDate(iv.date)}</span>
+    <span class="ix-type">${iv.type||"—"}</span>
+    <span class="ix-notes">${iv.notes||""}</span>
+    <span class="ix-rm" onclick="rmInteractionById('${iv.date}','${iv.id}')" title="Remove">\u2715</span>
+  </div>`).join("")}
+  <div style="margin-top:20px;padding-top:14px;border-top:0.5px solid var(--border)">
+    <button class="dbtn" onclick="if(confirm('Delete ${p.name.replace(/'/g,"\\'")} and all their interactions?')){deletePerson('${p.id}')}">Delete person</button>
+  </div>`;
+}
+
+function fmtBirthday(s){
+  // "MM-DD" or "YYYY-MM-DD"
+  const parts=s.split("-");
+  if(parts.length===2)return MOS[parseInt(parts[0],10)-1].slice(0,3)+" "+parseInt(parts[1],10);
+  return MOS[parseInt(parts[1],10)-1].slice(0,3)+" "+parseInt(parts[2],10)+(parts[0]!=="0000"?" "+parts[0]:"");
+}
+
+function renderPersonEdit(){
+  const d=personEditDraft||{name:"",tier:"",birthday:"",cadenceDays:"",notes:""};
+  const isNew=!d.id;
+  return`<div style="display:flex;gap:6px;margin-bottom:12px">
+    <button class="tb" onclick="cancelPersonEdit()">\u2039 Cancel</button>
+  </div>
+  <div style="font-size:16px;font-weight:600;margin-bottom:12px">${isNew?"New person":"Edit person"}</div>
+  <div class="pf-row"><span class="pf-label">Name *</span><input class="sinp" id="pf-name" value="${(d.name||"").replace(/"/g,"&quot;")}" placeholder="Jane Smith"></div>
+  <div class="pf-row"><span class="pf-label">Tier</span><select class="sinp" id="pf-tier">
+    <option value="">(none)</option>
+    ${TIERS.map(t=>`<option value="${t.k}"${d.tier===t.k?" selected":""}>${t.l}</option>`).join("")}
+  </select></div>
+  <div class="pf-row"><span class="pf-label">Birthday</span><input class="sinp" id="pf-birthday" type="date" value="${d.birthday||""}" title="Optional"><button class="tb" onclick="clearPersonField('birthday')" title="Clear birthday">\u2715</button></div>
+  <div class="pf-row"><span class="pf-label">Cadence</span><input class="sinp" id="pf-cadence" type="number" min="1" placeholder="(none)" value="${d.cadenceDays||""}" style="width:80px"><span style="font-size:11px;color:var(--text3)">days between check-ins (optional — leave blank to skip)</span></div>
+  <div class="pf-row" style="align-items:flex-start"><span class="pf-label" style="padding-top:6px">Notes</span><textarea class="sinp" id="pf-notes" rows="4" style="flex:1;margin:0;font-family:inherit">${d.notes||""}</textarea></div>
+  <div style="display:flex;gap:6px;margin-top:12px;justify-content:flex-end">
+    <button class="bc" onclick="cancelPersonEdit()">Cancel</button>
+    <button class="ba" onclick="savePersonEdit()">Save</button>
+  </div>`;
+}
+
+// Log-interaction modal (overlay)
+function renderLogInteractionModal(){
+  const seed=logInteractionSeed||{};
+  const seedDate=seed.date||dkf(today);
+  const peopleArr=Object.values(S.people||{}).sort((a,b)=>a.name.localeCompare(b.name));
+  const selectedIds=new Set(seed.personIds||[]);
+  const TYPES=["call","text","meal","hangout","video","meeting","event","other"];
+  return`<div class="ov" onclick="closeLogInteraction()"><div class="mdl" onclick="event.stopPropagation()">
+    <div class="mdl-t">Log interaction</div>
+    <div class="pf-row"><span class="pf-label">Date</span><input class="sinp" id="li-date" type="date" value="${seedDate}"></div>
+    <div class="pf-row" style="align-items:flex-start"><span class="pf-label" style="padding-top:4px">People</span><div style="flex:1">
+      <div class="ms-chips" id="li-chips">${[...selectedIds].map(pid=>{const p=S.people[pid];if(!p)return"";return`<span class="ms-chip" data-pid="${pid}">${p.name}<span class="ms-chip-x" onclick="liToggleP('${pid}')">\u2715</span></span>`;}).join("")||`<span style="color:var(--text3);font-size:11px">Select at least one person below</span>`}</div>
+      <div class="ms-pick">
+        ${peopleArr.length===0?`<div style="padding:8px 10px;font-size:11px;color:var(--text3)">No people yet — create one first.</div>`:peopleArr.map(p=>`<div class="ms-pick-item${selectedIds.has(p.id)?" sel":""}" onclick="liToggleP('${p.id}')">${p.name}${p.tier?` <span style="color:var(--text3);font-size:10px">\u00b7 ${tierInfo(p.tier)?.l||p.tier}</span>`:""}</div>`).join("")}
+      </div>
+    </div></div>
+    <div class="pf-row"><span class="pf-label">Type</span><select class="sinp" id="li-type">${TYPES.map(t=>`<option value="${t}">${t}</option>`).join("")}</select></div>
+    <div class="pf-row" style="align-items:flex-start"><span class="pf-label" style="padding-top:6px">Notes</span><textarea class="sinp" id="li-notes" rows="2" style="flex:1;margin:0;font-family:inherit" placeholder="(optional)"></textarea></div>
+    <div class="mft"><button class="bc" onclick="closeLogInteraction()">Cancel</button><button class="ba" onclick="saveLogInteraction()">Log</button></div>
+  </div></div>`;
+}
+
+function renderModal(sg){
+  if(!sg)sg=cumulativeSuggs(getRunCookIds());
+  const primary=(modalTab==="event"||modalTab==="learn")?modalTab:modalSlot;
+  const isMeal=!["event","learn"].includes(primary);
+  const primaryBtns=[{k:"breakfast",l:"Breakfast"},{k:"lunch",l:"Lunch"},{k:"dinner",l:"Dinner"},{k:"event",l:"Event"},{k:"learn",l:"Learn"}];
+  const typeBtns=[{k:"recipe",l:"Recipe"},{k:"quick",l:"Quick meal"},{k:"eatout",l:"Eat out"}];
+  return`<div class="ov" onclick="CM()"><div class="mdl" onclick="event.stopPropagation()">
+    <div class="mdl-t">Add to ${fmtDate(mdate)}</div>
+    <div style="display:flex;gap:3px;margin-bottom:6px;flex-wrap:wrap">${primaryBtns.map(b=>`<button class="fb${primary===b.k?" on":""}" onclick="setPrimary('${b.k}')">${b.l}</button>`).join("")}</div>
+    ${isMeal?`<div style="display:flex;gap:3px;margin-bottom:8px">${typeBtns.map(b=>`<button class="fb${modalTab===b.k?" on":""}" onclick="setMT('${b.k}')">${b.l}</button>`).join("")}</div>`:""}
+    ${modalTab==="recipe"&&isMeal?`
+      ${R.map(r=>{const col=CCOL[r.cu[0]]||{bg:"#eee",c:"#333"};return`<div class="mr${mpick===r.id?" on":""}" onclick="MP('${r.id}')"><span class="tag" style="background:${col.bg};color:${col.c};flex-shrink:0;font-size:9px">${r.cu[0]}</span><span class="mrn">${r.name}</span><span style="font-size:9px;color:var(--text2);cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();VR('${r.id}')">view</span></div>`;}).join("")}
+      <div class="mft"><button class="bc" onclick="CM()">Cancel</button><button class="ba" onclick="addCook()"${!mpick?" disabled":""}>Add</button></div>
+    `:modalTab==="quick"&&isMeal?`
+      ${S.quickMeals.map(m=>`<div class="mr${mpick===("qm:"+m)?" on":""}" onclick="MP('qm:${m.replace(/'/g,"\\'")}')"><span class="mrn">${m}</span></div>`).join("")}
+      <div style="margin-top:4px;display:flex;gap:4px"><input class="sinp" id="mq-new" placeholder="New..." style="margin:0;flex:1"><button class="tb" onclick="addQMModal()">+</button></div>
+      <div class="mft"><button class="bc" onclick="CM()">Cancel</button><button class="ba" onclick="addQuick()"${!mpick||!mpick.startsWith("qm:")?" disabled":""}>Add</button></div>
+    `:modalTab==="eatout"&&isMeal?`
+      <input class="sinp" id="eo-label" placeholder="Label (e.g. Sushi night)">
+      <div class="mft"><button class="bc" onclick="CM()">Cancel</button><button class="ba" onclick="addEO()">Add</button></div>
+    `:primary==="event"?`
+      <input class="sinp" id="ev-title" placeholder="Event title">
+      <input class="sinp" id="ev-time" placeholder="Time (e.g. 6:00 PM)">
+      <select class="sinp" id="ev-cat">
+        <option value="">(no category)</option>
+        ${(S.eventCategories||[]).map(c=>`<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join("")}
+      </select>
+      <input class="sinp" id="ev-notes" placeholder="Notes">
+      <div class="mft"><button class="bc" onclick="CM()">Cancel</button><button class="ba" onclick="addEvent()">Add</button></div>
+    `:`
+      <select class="sinp" id="ml-topic-sel" onchange="onModalLearnTopicChange(this.value)" style="margin-bottom:6px">
+        <option value="">Select topic\u2026</option>
+        ${(S.learnTopics||[]).map(t=>`<option value="${t.replace(/"/g,"&quot;")}">${t}</option>`).join("")}
+        <option value="__new__">+ New topic\u2026</option>
+      </select>
+      <input class="sinp" id="ml-topic" placeholder="New topic name" style="display:none">
+      <input class="sinp" id="ml-hrs" type="number" step="0.25" placeholder="Hours"><input class="sinp" id="ml-notes" placeholder="Notes">
+      <div class="mft"><button class="bc" onclick="CM()">Cancel</button><button class="ba" onclick="logLearnModal()">Log</button></div>
+    `}
+  </div></div>`;
+}
+
+function renderRecipePanel(){
+  const r=R.find(x=>x.id===viewRecipe);if(!r)return"";
+  const col=CCOL[r.cu[0]]||{bg:"#eee",c:"#333"};
+  return`<div class="rpanel"><button class="rpanel-close" onclick="VR(null)">\u2715</button>
+    <div class="rpanel-name">${r.name}</div>
+    <div class="rpanel-meta"><span class="tag" style="background:${col.bg};color:${col.c}">${r.cu.join(", ")}</span> \u00b7 ${r.srv} servings \u00b7 ${getLeftoverCount(r.srv)} leftover days</div>
+    <div class="rpanel-macros">
+      <div class="rpanel-macro"><div class="rpanel-macro-val">${r.cal}</div><div class="rpanel-macro-label">Cal</div></div>
+      <div class="rpanel-macro"><div class="rpanel-macro-val">${r.pro}g</div><div class="rpanel-macro-label">Pro</div></div>
+      <div class="rpanel-macro"><div class="rpanel-macro-val">${r.carb}g</div><div class="rpanel-macro-label">Carb</div></div>
+      <div class="rpanel-macro"><div class="rpanel-macro-val">${r.fat}g</div><div class="rpanel-macro-label">Fat</div></div>
+    </div>
+    <div class="rpanel-section">Ingredients</div>
+    ${r.ing.map(ig=>`<div class="rpanel-ing"><span>${ig.i}</span><span style="color:var(--text2)">${ig.q!==null?ig.q+" "+ig.u:ig.u}</span></div>`).join("")}
+    <div class="rpanel-section">Instructions</div>
+    ${r.inst.map((s,i)=>`<div class="rpanel-step"><span class="rpanel-stepnum">${i+1}</span><span>${s}</span></div>`).join("")}
+    <button class="rpanel-ics" onclick="expMealICS('${r.id}')">Export meal prep .ics</button>
+  </div>`;
+}
+
+// v0.7: Day edit modal — for retroactively editing any day (past, today, future)
+function renderDayEditModal(){
+  const dk=dayEditDate;if(!dk)return"";
+  const dayMeals=S.meals[dk]||{breakfast:[],lunch:[],dinner:[]};
+  const dayEvents=S.events[dk]||[];
+  const dayLearn=S.learnLog[dk]||[];
+  const dayRun=S.actualRuns[dk];
+  const plannedRun=S.runDays.find(r=>r.date===dk);
+  const dayInteractions=(S.interactions&&S.interactions[dk])||[];
+  const d=parsedk(dk);
+  const dateLabel=DWS[d.getDay()]+", "+MOS[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
+
+  // Build meal list with slot info
+  const mealItems=[];
+  SLOTS.forEach(sl=>{(dayMeals[sl]||[]).forEach((e,idx)=>{
+    let lbl="";
+    if(e.type==="cook"){const r=R.find(x=>x.id===e.id);lbl=r?r.name:"(unknown recipe)";}
+    else if(e.type==="quick"||e.type==="eatout"){lbl=e.name||"";}
+    mealItems.push({slot:sl,idx,type:e.type,lbl});
+  });});
+
+  return`<div class="ov" onclick="closeDayEdit()"><div class="mdl mdl-day" onclick="event.stopPropagation()">
+    <div class="mdl-t">Edit ${dateLabel}</div>
+    <div class="mdl-sub">Retroactively edit meals, events, runs, and learning for this day.</div>
+
+    <div class="de-section">
+      <div class="de-section-hdr"><span class="de-section-title">Meals</span><button class="de-add-btn" onclick="openAddFromDayEdit('meal')">+ Add meal</button></div>
+      ${mealItems.length?mealItems.map(m=>`<div class="de-item"><span class="de-item-slot">${m.slot.charAt(0).toUpperCase()}</span><span class="de-item-lbl">${m.lbl||"(empty)"}</span><span class="de-item-meta">${m.type}</span><span class="de-item-rm" onclick="deRmMeal('${dk}','${m.slot}',${m.idx})" title="Remove">\u2715</span></div>`).join(""):`<div class="de-empty">No meals logged.</div>`}
+    </div>
+
+    <div class="de-section">
+      <div class="de-section-hdr"><span class="de-section-title">Events</span><button class="de-add-btn" onclick="openAddFromDayEdit('event')">+ Add event</button></div>
+      ${dayEvents.length?dayEvents.map((e,i)=>`<div class="de-item"><span class="de-item-lbl">${e.title}${e.time?" \u2014 "+e.time:""}</span><span class="de-item-meta">${e.notes||""}</span><span class="de-item-rm" onclick="deRmEvent('${dk}',${i})">\u2715</span></div>`).join(""):`<div class="de-empty">No events.</div>`}
+    </div>
+
+    <div class="de-section">
+      <div class="de-section-hdr"><span class="de-section-title">Learning</span><button class="de-add-btn" onclick="openAddFromDayEdit('learn')">+ Log session</button></div>
+      ${dayLearn.length?dayLearn.map((e,i)=>`<div class="de-item"><span class="de-item-lbl"><strong>${e.topic}</strong>${e.notes?" \u2014 "+e.notes:""}</span><span class="de-item-meta">${e.hours}h</span><span class="de-item-rm" onclick="deRmLearn('${dk}',${i})">\u2715</span></div>`).join(""):`<div class="de-empty">No learning sessions logged.</div>`}
+    </div>
+
+    <div class="de-section">
+      <div class="de-section-hdr"><span class="de-section-title">Interactions</span><button class="de-add-btn" onclick="openLogInteractionFromDayEdit('${dk}')">+ Log interaction</button></div>
+      ${dayInteractions.length?dayInteractions.map(iv=>{
+        const names=(iv.personIds||[]).map(pid=>S.people?.[pid]?.name||"?").join(", ");
+        return `<div class="de-item"><span class="de-item-lbl"><strong>${names||"(unknown)"}</strong>${iv.notes?" \u2014 "+iv.notes:""}</span><span class="de-item-meta">${iv.type||""}</span><span class="de-item-rm" onclick="rmInteraction('${dk}','${iv.id}')">\u2715</span></div>`;
+      }).join(""):`<div class="de-empty">No interactions logged.</div>`}
+    </div>
+
+    <div class="de-section">
+      <div class="de-section-hdr"><span class="de-section-title">Run</span></div>
+      ${plannedRun?`<div class="de-item"><span class="de-item-slot" style="color:var(--teal-t)">P</span><span class="de-item-lbl">${plannedRun.type} \u2014 ${plannedRun.dist}mi @ ${fmtPace(plannedRun.pace)}/mi</span><span class="de-item-meta">${plannedRun.phase}</span></div>`:""}
+      ${dayRun?`<div class="de-item"><span class="de-item-slot" style="color:var(--teal-t)">A</span><span class="de-item-lbl">Actual: ${dayRun.dist}mi${dayRun.pace?" @ "+fmtPace(dayRun.pace)+"/mi":""}</span><span class="de-item-meta">${dayRun.notes||""}</span><span class="de-item-rm" onclick="deRmRun('${dk}')">\u2715</span></div>`:""}
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:end;margin-top:4px">
+        <div class="run-field"><label>Miles</label><input type="number" id="de-run-dist" step="0.1" value="${dayRun?dayRun.dist:""}" style="width:60px"></div>
+        <div class="run-field"><label>Pace</label><input type="text" id="de-run-pace" placeholder="MM:SS" value="${dayRun&&dayRun.pace?fmtPace(dayRun.pace):""}" style="width:60px"></div>
+        <div class="run-field"><label>Notes</label><input type="text" id="de-run-notes" value="${dayRun?(dayRun.notes||"").replace(/"/g,"&quot;"):""}" style="width:110px"></div>
+        <button class="tb" onclick="deLogRun('${dk}')">${dayRun?"Update":"Log"}</button>
+      </div>
+    </div>
+
+    <div class="mft"><button class="bc" onclick="closeDayEdit()">Close</button></div>
+  </div></div>`;
+}
+
+// ═══════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════
+function sv(){save();render();}
+// Save without scroll jump — for actions within scrollable content
+function svKeepScroll(){
+  save();
+  const cnt=document.querySelector('.cnt');
+  const scrollTop=cnt?cnt.scrollTop:0;
+  render();
+  requestAnimationFrame(()=>{const cnt2=document.querySelector('.cnt');if(cnt2)cnt2.scrollTop=scrollTop;});
+}
+window.ST=t=>{tab=t;render();};window.SF=f=>{fc=f;render();};window.SQ=v=>{q=v;render();};
+window.SR=id=>{sel=sel===id?null:id;render();};
+window.PM=()=>{if(vM===0){vM=11;vY--;}else vM--;render();};
+window.NM=()=>{const max=new Date(today.getFullYear(),today.getMonth()+30,1);if(new Date(vY,vM+1,1)<=max){if(vM===11){vM=0;vY++;}else vM++;}render();};
+window.TFS=v=>{if(v){S.activeRun.start=v;sv();}};
+window.TFE=v=>{if(v){S.activeRun.end=v;sv();}};
+window.toggleSide=()=>{sideCollapsed=!sideCollapsed;render();};
+window.VR=id=>{viewRecipe=viewRecipe===id?null:id;render();};
+window.OM=date=>{modal=true;mdate=date;mpick=sel||null;modalTab="recipe";modalSlot="dinner";render();};
+window.CM=()=>{modal=false;mpick=null;render();};
+window.MP=id=>{mpick=id;render();};
+window.setMT=t=>{modalTab=t;mpick=null;render();};
+window.setSlot=s=>{modalSlot=s;render();};
+
+// Meals
+window.addCook=()=>{if(!mpick||!mdate)return;ensureDay(mdate);S.meals[mdate][modalSlot].push({type:"cook",id:mpick});modal=false;mpick=null;sv();};
+window.addQuick=()=>{if(!mpick||!mpick.startsWith("qm:")||!mdate)return;ensureDay(mdate);S.meals[mdate][modalSlot].push({type:"quick",name:mpick.slice(3)});modal=false;mpick=null;sv();};
+window.addEO=()=>{if(!mdate)return;ensureDay(mdate);const lb=(document.getElementById("eo-label")?.value.trim())||"Eat out";S.meals[mdate][modalSlot].push({type:"eatout",name:lb});modal=false;sv();};
+window.rmMeal=(dk,slot,idx)=>{if(S.meals[dk]?.[slot]&&idx>=0){S.meals[dk][slot].splice(idx,1);}sv();};
+window.addQMModal=()=>{const inp=document.getElementById("mq-new");if(!inp||!inp.value.trim())return;const n=inp.value.trim();if(!S.quickMeals.includes(n))S.quickMeals.push(n);mpick="qm:"+n;save();render();};
+window.addQMI=()=>{const inp=document.getElementById("newqm");if(!inp||!inp.value.trim())return;if(!S.quickMeals.includes(inp.value.trim()))S.quickMeals.push(inp.value.trim());sv();};
+window.delQM=i=>{S.quickMeals.splice(i,1);sv();};
+
+// Events
+window.addEvent=()=>{if(!mdate)return;const t=document.getElementById("ev-title")?.value.trim();if(!t)return;const time=document.getElementById("ev-time")?.value.trim()||"";const notes=document.getElementById("ev-notes")?.value.trim()||"";const category=document.getElementById("ev-cat")?.value.trim()||"";const ev={title:t,time,notes};if(category)ev.category=category;(S.events[mdate]||(S.events[mdate]=[])).push(ev);modal=false;sv();};
+window.rmEvent=(dk,idx)=>{if(S.events[dk]&&idx>=0){S.events[dk].splice(idx,1);if(!S.events[dk].length)delete S.events[dk];}sv();};
+// Modal primary selection (slot-first flow)
+window.setPrimary=p=>{if(p==="event"||p==="learn"){modalTab=p;}else{modalSlot=p;if(!["recipe","quick","eatout"].includes(modalTab))modalTab="recipe";}mpick=null;render();};
+// Event categories
+window.addEventCategory=()=>{const inp=document.getElementById("newcat");if(!inp||!inp.value.trim())return;const c=inp.value.trim();if(!S.eventCategories)S.eventCategories=[];if(!S.eventCategories.includes(c))S.eventCategories.push(c);inp.value="";sv();};
+window.removeEventCategory=cat=>{S.eventCategories=(S.eventCategories||[]).filter(c=>c!==cat);sv();};
+// Chore templates
+window.addChoreTemplate=()=>{const inp=document.getElementById("ct-name");const sel=document.getElementById("ct-dow");if(!inp||!inp.value.trim()||!sel)return;const name=inp.value.trim();const dow=parseInt(sel.value,10);if(!S.choreTemplates)S.choreTemplates=[];S.choreTemplates.push({id:genId("ct"),name,dow});inp.value="";sv();};
+window.removeChoreTemplate=id=>{S.choreTemplates=(S.choreTemplates||[]).filter(t=>t.id!==id);S.choreOverrides=(S.choreOverrides||[]).filter(o=>o.templateId!==id);sv();};
+window.choreDragStart=(templateId,originalDate,ev)=>{dragChoreData={templateId,originalDate};ev.dataTransfer.effectAllowed="move";ev.stopPropagation();};
+window.choreDropOnDay=(targetDate,ev)=>{ev.preventDefault();ev.stopPropagation();if(!dragChoreData)return;const{templateId,originalDate}=dragChoreData;dragChoreData=null;if(targetDate===originalDate)return;if(!S.choreOverrides)S.choreOverrides=[];const idx=S.choreOverrides.findIndex(o=>o.templateId===templateId&&o.originalDate===originalDate);if(idx>=0)S.choreOverrides[idx].movedTo=targetDate;else S.choreOverrides.push({templateId,originalDate,movedTo:targetDate});sv();};
+
+// Recurring
+window.toggleRec=day=>{const idx=S.recurringEatout.indexOf(day);if(idx>=0)S.recurringEatout.splice(idx,1);else S.recurringEatout.push(day);sv();};
+
+// Shopping
+window.toggleChk=k=>{S.activeRun.chk[k]=!S.activeRun.chk[k];svKeepScroll();};
+window.clearChk=()=>{S.activeRun.chk={};svKeepScroll();};
+window.toggleHideChecked=()=>{hideChecked=!hideChecked;svKeepScroll();};
+window.archiveRun=()=>{const ids=getRunCookIds();if(!ids.length)return;
+  S.shopArchive.push({start:S.activeRun.start,end:S.activeRun.end,recipes:ids,purchased:{...S.activeRun.chk},closedAt:dkf(today)});
+  const next=new Date(S.activeRun.end+"T12:00:00");next.setDate(next.getDate()+1);
+  S.activeRun={start:dkf(next),end:dkf(new Date(next.getFullYear(),next.getMonth(),next.getDate()+13)),chk:{}};sv();};
+window.exportShopICS=()=>{const ids=getRunCookIds();const evts=[];const seen=new Set();ids.forEach(id=>{if(seen.has(id))return;seen.add(id);const r=R.find(x=>x.id===id);if(!r)return;const dk=Object.entries(S.meals).find(([k,sl])=>isInRun(k)&&SLOTS.some(s=>(sl[s]||[]).some(e=>e.id===id)));if(dk)evts.push({title:"Meal Prep: "+r.name,date:dk[0],dur:60,desc:r.inst.join("\n")});});if(evts.length)dlICS("sol_mealprep.ics",makeBatchICS(evts));};
+
+// Running
+window.setRP=(k,v)=>{S.runPlan[k]=v;sv();};
+window.genPlan=()=>{if(!S.runPlan.raceDate)return alert("Set a race date");S.runDays=generateRunPlan(S.runPlan.raceDate,S.runPlan.distance,S.runPlan.goalTime,S.runPlan.level);sv();};
+window.logRun=()=>{const dk=document.getElementById("ar-date")?.value;const dist=+(document.getElementById("ar-dist")?.value)||0;const pace=parsePace(document.getElementById("ar-pace")?.value||"");const notes=document.getElementById("ar-notes")?.value?.trim()||"";if(!dk||!dist)return;S.actualRuns[dk]={dist:Math.round(dist*100)/100,pace:pace?Math.round(pace*100)/100:null,notes};sv();};
+window.expRun=i=>{const r=S.runDays[i];if(!r)return;dlICS(r.type.replace(/\s/g,"_")+"_"+r.date+".ics",makeICS(r.type+" - "+r.dist+"mi",r.date,Math.round(r.dist*r.pace),r.phase+" | "+fmtPace(r.pace)+"/mi"));};
+window.batchRunICS=()=>{dlICS("sol_run_plan.ics",makeBatchICS(S.runDays.map(r=>({title:r.type+" - "+r.dist+"mi",date:r.date,dur:Math.round(r.dist*r.pace),desc:r.phase+" | "+fmtPace(r.pace)+"/mi"}))));};
+window.expMealICS=id=>{const r=R.find(x=>x.id===id);if(!r)return;dlICS("mealprep_"+r.id+".ics",makeICS("Meal Prep: "+r.name,dkf(today),60,r.inst.join("\n")));};
+
+// Learning — multi-entry per day, v0.7: date-aware + topic dropdown
+window.logLearn=()=>{
+  const sel=document.getElementById("learn-topic-sel");
+  let t="";
+  if(sel){
+    if(sel.value==="__new__"){t=document.getElementById("learn-topic-new")?.value.trim()||"";}
+    else{t=sel.value;}
+  }
+  if(!t)return;
+  const dk=document.getElementById("learn-date")?.value||dkf(today);
+  const hrs=Math.round((+(document.getElementById("learn-hrs")?.value)||0)*100)/100;
+  const notes=document.getElementById("learn-notes")?.value?.trim()||"";
+  if(!S.learnLog[dk])S.learnLog[dk]=[];
+  S.learnLog[dk].push({topic:t,hours:hrs,notes});
+  // If topic is new, add it to learnTopics list so it shows up in future dropdowns
+  if(!S.learnTopics.includes(t))S.learnTopics.push(t);
+  sv();
+};
+// When a user picks "+ New topic" from the dropdown, reveal the text input
+window.onLearnTopicChange=v=>{
+  const inp=document.getElementById("learn-topic-new");
+  if(!inp)return;
+  if(v==="__new__"){inp.style.display="";inp.focus();}
+  else{inp.style.display="none";inp.value="";}
+};
+window.logLearnModal=()=>{
+  if(!mdate)return;
+  const sel=document.getElementById("ml-topic-sel");
+  let t="";
+  if(sel){
+    if(sel.value==="__new__"){t=document.getElementById("ml-topic")?.value.trim()||"";}
+    else{t=sel.value;}
+  }else{t=document.getElementById("ml-topic")?.value.trim()||"";}
+  if(!t)return;
+  const hrs=Math.round((+(document.getElementById("ml-hrs")?.value)||0)*100)/100;
+  const notes=document.getElementById("ml-notes")?.value?.trim()||"";
+  if(!S.learnLog[mdate])S.learnLog[mdate]=[];
+  S.learnLog[mdate].push({topic:t,hours:hrs,notes});
+  if(!S.learnTopics.includes(t))S.learnTopics.push(t);
+  modal=false;sv();
+};
+window.onModalLearnTopicChange=v=>{
+  const inp=document.getElementById("ml-topic");if(!inp)return;
+  if(v==="__new__"){inp.style.display="";inp.focus();}
+  else{inp.style.display="none";inp.value="";}
+};
+window.rmLearn=(dk,idx)=>{if(S.learnLog[dk]){S.learnLog[dk].splice(idx,1);if(!S.learnLog[dk].length)delete S.learnLog[dk];}sv();};
+// v0.7: Topics (renamed from queue)
+window.addLT=()=>{const inp=document.getElementById("learn-topic-new-queue");if(!inp||!inp.value.trim())return;const v=inp.value.trim();if(!S.learnTopics.includes(v))S.learnTopics.push(v);sv();};
+window.delLT=i=>{S.learnTopics.splice(i,1);sv();};
+// Back-compat: keep the old learn-modal (in the big Add modal) if someone uses it
+window.addLQ=()=>{const inp=document.getElementById("learn-new");if(!inp||!inp.value.trim())return;if(!S.learnTopics.includes(inp.value.trim()))S.learnTopics.push(inp.value.trim());sv();};
+window.delLQ=i=>{S.learnTopics.splice(i,1);sv();};
+// v0.7: expand/collapse recent log rows
+window.toggleLearnExp=dk=>{expandedLearnDate=expandedLearnDate===dk?null:dk;render();};
+
+// Goals — per month
+window.updGoal=(i,k,v)=>{const goals=getGoals(vY,vM);goals[i][k]=v;setGoals(vY,vM,goals);render();};
+
+// Pantry
+window.rmPantry=i=>{S.pantryProfile.splice(i,1);sv();};
+window.addPantry=()=>{const inp=document.getElementById("newpantry");if(!inp||!inp.value.trim())return;const n=norm(inp.value.trim());if(!S.pantryProfile.includes(n))S.pantryProfile.push(n);sv();};
+
+// ═══════════════════════════════════════
+// v0.7: DAY EDIT (retroactive editing)
+// ═══════════════════════════════════════
+window.EDITDAY=dk=>{dayEdit=true;dayEditDate=dk;render();};
+window.closeDayEdit=()=>{dayEdit=false;dayEditDate=null;render();};
+window.deRmMeal=(dk,slot,idx)=>{if(S.meals[dk]?.[slot]&&idx>=0){S.meals[dk][slot].splice(idx,1);}sv();};
+window.deRmEvent=(dk,idx)=>{if(S.events[dk]&&idx>=0){S.events[dk].splice(idx,1);if(!S.events[dk].length)delete S.events[dk];}sv();};
+window.deRmLearn=(dk,idx)=>{if(S.learnLog[dk]){S.learnLog[dk].splice(idx,1);if(!S.learnLog[dk].length)delete S.learnLog[dk];}sv();};
+window.deRmRun=dk=>{delete S.actualRuns[dk];sv();};
+window.deLogRun=dk=>{
+  const dist=+(document.getElementById("de-run-dist")?.value)||0;
+  const pace=parsePace(document.getElementById("de-run-pace")?.value||"");
+  const notes=document.getElementById("de-run-notes")?.value?.trim()||"";
+  if(!dist){delete S.actualRuns[dk];sv();return;}
+  S.actualRuns[dk]={dist:Math.round(dist*100)/100,pace:pace?Math.round(pace*100)/100:null,notes};
+  sv();
+};
+// Open the Add modal from within the day-edit modal, seeded to that date
+window.openAddFromDayEdit=which=>{
+  const dk=dayEditDate;if(!dk)return;
+  dayEdit=false;
+  modal=true;mdate=dk;mpick=sel||null;
+  modalTab=which==="event"?"event":which==="learn"?"learn":"recipe";
+  modalSlot="dinner";
+  render();
+};
+
+// ═══════════════════════════════════════
+// v0.8: PEOPLE ACTIONS
+// ═══════════════════════════════════════
+window.setPeopleSearch=v=>{peopleSearch=v;render();};
+window.setPeopleFilter=f=>{peopleFilter=f;render();};
+window.openPersonDetail=pid=>{
+  if(!S.people[pid])return;
+  selectedPersonId=pid;peopleView="detail";
+  if(tab!=="people")tab="people";
+  render();
+};
+window.backToPeopleList=()=>{peopleView="list";selectedPersonId=null;render();};
+window.openPersonEdit=pid=>{
+  if(pid&&S.people[pid])personEditDraft={...S.people[pid]};
+  else personEditDraft={id:null,name:"",tier:"",birthday:"",cadenceDays:"",notes:""};
+  peopleView="edit";
+  if(tab!=="people")tab="people";
+  render();
+};
+window.cancelPersonEdit=()=>{
+  personEditDraft=null;
+  peopleView=selectedPersonId?"detail":"list";
+  render();
+};
+window.clearPersonField=field=>{
+  if(!personEditDraft)return;
+  // Pull current form state first so user-typed values aren't lost
+  collectPersonEditForm();
+  personEditDraft[field]="";
+  render();
+};
+function collectPersonEditForm(){
+  if(!personEditDraft)return;
+  const n=document.getElementById("pf-name");if(n)personEditDraft.name=n.value;
+  const t=document.getElementById("pf-tier");if(t)personEditDraft.tier=t.value;
+  const b=document.getElementById("pf-birthday");if(b)personEditDraft.birthday=b.value;
+  const c=document.getElementById("pf-cadence");if(c){const v=+c.value;personEditDraft.cadenceDays=v>0?v:"";}
+  const no=document.getElementById("pf-notes");if(no)personEditDraft.notes=no.value;
+}
+window.savePersonEdit=()=>{
+  collectPersonEditForm();
+  const d=personEditDraft;
+  if(!d||!d.name||!d.name.trim()){alert("Name is required");return;}
+  const isNew=!d.id;
+  const id=d.id||genId("p");
+  S.people[id]={
+    id,
+    name:d.name.trim(),
+    tier:d.tier||undefined,
+    birthday:d.birthday||undefined,
+    cadenceDays:d.cadenceDays&&+d.cadenceDays>0?+d.cadenceDays:undefined,
+    notes:d.notes?d.notes.trim()||undefined:undefined,
+    created:isNew?dkf(today):(S.people[id]?.created||dkf(today))
+  };
+  // Strip undefined so they don't clutter the saved object
+  Object.keys(S.people[id]).forEach(k=>{if(S.people[id][k]===undefined)delete S.people[id][k];});
+  personEditDraft=null;
+  selectedPersonId=id;
+  peopleView="detail";
+  sv();
+};
+window.deletePerson=pid=>{
+  if(!S.people[pid])return;
+  delete S.people[pid];
+  // Remove this personId from every interaction; drop interactions that now have zero people
+  Object.keys(S.interactions||{}).forEach(dk=>{
+    S.interactions[dk]=(S.interactions[dk]||[]).map(iv=>({...iv,personIds:(iv.personIds||[]).filter(p=>p!==pid)})).filter(iv=>(iv.personIds||[]).length>0);
+    if(S.interactions[dk].length===0)delete S.interactions[dk];
+  });
+  selectedPersonId=null;peopleView="list";
+  sv();
+};
+
+// Log-interaction modal
+window.openLogInteraction=()=>{logInteractionOpen=true;logInteractionSeed={date:dkf(today),personIds:[]};render();};
+window.openLogInteractionFor=pid=>{logInteractionOpen=true;logInteractionSeed={date:dkf(today),personIds:[pid]};render();};
+window.openLogInteractionFromDayEdit=dk=>{dayEdit=false;dayEditDate=null;logInteractionOpen=true;logInteractionSeed={date:dk,personIds:[]};render();};
+window.closeLogInteraction=()=>{logInteractionOpen=false;logInteractionSeed=null;render();};
+window.liToggleP=pid=>{
+  // Pull current date/type/notes from DOM so they aren't lost on re-render
+  if(!logInteractionSeed)logInteractionSeed={};
+  const d=document.getElementById("li-date");if(d)logInteractionSeed.date=d.value||logInteractionSeed.date;
+  const ty=document.getElementById("li-type");if(ty)logInteractionSeed.type=ty.value;
+  const no=document.getElementById("li-notes");if(no)logInteractionSeed.notes=no.value;
+  const set=new Set(logInteractionSeed.personIds||[]);
+  if(set.has(pid))set.delete(pid);else set.add(pid);
+  logInteractionSeed.personIds=[...set];
+  render();
+};
+window.saveLogInteraction=()=>{
+  const dk=document.getElementById("li-date")?.value||dkf(today);
+  const type=document.getElementById("li-type")?.value||"other";
+  const notes=document.getElementById("li-notes")?.value?.trim()||"";
+  const personIds=logInteractionSeed?.personIds||[];
+  if(personIds.length===0){alert("Pick at least one person");return;}
+  const id=genId("ix");
+  if(!S.interactions[dk])S.interactions[dk]=[];
+  const entry={id,personIds:[...personIds],type};
+  if(notes)entry.notes=notes;
+  S.interactions[dk].push(entry);
+  logInteractionOpen=false;logInteractionSeed=null;
+  sv();
+};
+// Remove by date + interaction id — used by the calendar chip × and the person detail view
+window.rmInteraction=(dk,iid)=>{
+  if(!S.interactions[dk])return;
+  S.interactions[dk]=S.interactions[dk].filter(iv=>iv.id!==iid);
+  if(S.interactions[dk].length===0)delete S.interactions[dk];
+  sv();
+};
+window.rmInteractionById=(dk,iid)=>window.rmInteraction(dk,iid);
+
+render();
+</script>
+</body>
+</html>
